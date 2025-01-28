@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -xeuo pipefail
+for d in */; do
+  cd $d
+  if test -f "test"; then
+    ./test
+  fi
+  cd -
+done
