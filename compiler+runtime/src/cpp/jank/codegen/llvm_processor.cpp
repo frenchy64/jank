@@ -923,29 +923,70 @@ namespace jank::codegen
   {
     auto const wrapped_body(
       evaluate::wrap_expression(make_box<expression>(expr.body), "try_body", {}));
-    auto const wrapped_catch(evaluate::wrap_expression(make_box<expression>(expr.catch_body.body),
-                                                       "catch",
-                                                       { expr.catch_body.sym }));
+    auto const wrapped_catch(expr.catch_body.map([](auto const &catch_) {
+        return evaluate::wrap_expression(make_box<expression>(catch_->body), "catch", { catch_->sym }))});
+    auto const wrapped_catch_default(expr.catch_default_body.map([](auto const &catch_default) {
+        return evaluate::wrap_expression(make_box<expression>(catch_default), "catch_default", {}))});
     auto const wrapped_finally(expr.finally_body.map([](auto const &finally) {
       return evaluate::wrap_expression(make_box<expression>(finally), "finally", {});
     }));
 
     auto const body(gen(wrapped_body, arity));
-    auto const catch_(gen(wrapped_catch, arity));
-    auto const finally(
-      wrapped_finally.map([&](auto const &finally) { return gen(finally, arity); }));
+    auto const catch_(   wrapped_catch.map    ([&](auto const &catch_)    { return gen(catch_,    arity)) });
+    auto const catch_default(wrapped_catch_default.map([&](auto const &catch_default) { return gen(catch_default, arity)) });
+    auto const finally(  wrapped_finally.map  ([&](auto const &finally)   { return gen(finally,   arity); }));
 
-    auto const fn_type(llvm::FunctionType::get(
-      ctx->builder->getPtrTy(),
-      { ctx->builder->getPtrTy(), ctx->builder->getPtrTy(), ctx->builder->getPtrTy() },
-      false));
-    auto const fn(ctx->module->getOrInsertFunction("jank_try", fn_type));
+    auto const has_catch(catch_.is_some());
+    auto const has_catch_default(catch_default.is_some());
+    auto const has_finally(finally.is_some());
 
-    llvm::SmallVector<llvm::Value *, 3> const args{ body,
-                                                    catch_,
-                                                    finally.unwrap_or(
-                                                      gen_global(obj::nil::nil_const())) };
-    auto const call(ctx->builder->CreateCall(fn, args));
+    llvm::Value *call{};
+
+    if (has_catch && has_catch_default)
+    {
+      auto const fn_type(llvm::FunctionType::get(
+        ctx->builder->getPtrTy(),
+        { ctx->builder->getPtrTy(), ctx->builder->getPtrTy(), ctx->builder->getPtrTy() },
+        false));
+      auto const fn(ctx->module->getOrInsertFunction("jank_try_catch_all", fn_type));
+      llvm::SmallVector<llvm::Value *, 3> const args{ body, catch_, catch_default};
+      call = ctx->builder->CreateCall(fn, args);
+    }
+    else if (has_catch)
+    {
+      auto const fn_type(llvm::FunctionType::get(
+        ctx->builder->getPtrTy(),
+        { ctx->builder->getPtrTy(), ctx->builder->getPtrTy() },
+        false));
+      auto const fn(ctx->module->getOrInsertFunction("jank_try_catch", fn_type));
+      llvm::SmallVector<llvm::Value *, 2> const args{ body, catch_};
+      call = ctx->builder->CreateCall(fn, args);
+    }
+    else if (has_catch_default)
+    {
+      auto const fn_type(llvm::FunctionType::get(
+        ctx->builder->getPtrTy(),
+        { ctx->builder->getPtrTy(), ctx->builder->getPtrTy() },
+        false));
+      auto const fn(ctx->module->getOrInsertFunction("jank_try_catch_default", fn_type));
+      llvm::SmallVector<llvm::Value *, 2> const args{ body, catch_default };
+      call = ctx->builder->CreateCall(fn, args);
+    }
+    else
+    {
+      call = body;
+    }
+
+    if (has_finally)
+    {
+      auto const fn_type(llvm::FunctionType::get(
+        ctx->builder->getPtrTy(),
+        { ctx->builder->getPtrTy(), ctx->builder->getPtrTy() },
+        false));
+      auto const fn(ctx->module->getOrInsertFunction("jank_try_finally", fn_type));
+      llvm::SmallVector<llvm::Value *, 2> const args{ call, finally };
+      call = ctx->builder->CreateCall(fn, args);
+    }
 
     if(expr.position == expression_position::tail)
     {

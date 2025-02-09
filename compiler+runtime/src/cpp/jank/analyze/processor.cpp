@@ -966,6 +966,9 @@ namespace jank::analyze
      * It holds the exception value which was caught. */
     auto catch_frame(
       make_box<local_frame>(local_frame::frame_type::catch_, current_frame->rt_ctx, current_frame));
+    auto catch_default_frame(make_box<local_frame>(local_frame::frame_type::catch_default,
+                                                   current_frame->rt_ctx,
+                                                   current_frame));
     auto finally_frame(make_box<local_frame>(local_frame::frame_type::finally,
                                              current_frame->rt_ctx,
                                              current_frame));
@@ -984,11 +987,13 @@ namespace jank::analyze
     {
       other,
       catch_,
+      catch_default,
       finally_
     };
 
     static runtime::obj::symbol catch_{ "catch" }, finally_{ "finally" };
-    native_bool has_catch{}, has_finally{};
+    static runtime::obj::keyword default_kw{ "default" };
+    native_bool has_catch{}, has_catch_default{}, has_finally{};
 
     for(auto it(next_in_place(list->fresh_seq())); it != nullptr; it = next_in_place(it))
     {
@@ -1003,10 +1008,18 @@ namespace jank::analyze
           }
           else
           {
-            auto const first(typed_item->seq()->first());
+            auto const all(typed_item->seq());
+            auto const first(all->first());
             if(runtime::equal(first, &catch_))
             {
-              return try_expression_type::catch_;
+              auto const second(all->rest()->first());
+              if(runtime::equal(second, &default_kw))
+              {
+                return try_expression_type::catch_default;
+              }
+              {
+                return try_expression_type::catch_;
+              }
             }
             else if(runtime::equal(first, &finally_))
             {
@@ -1025,7 +1038,7 @@ namespace jank::analyze
       {
         case try_expression_type::other:
           {
-            if(has_catch || has_finally)
+            if(has_catch || has_catch_default || has_finally)
             {
               return err(error{ "extra forms after catch/finally" });
             }
@@ -1087,6 +1100,35 @@ namespace jank::analyze
             ret.catch_body = expr::catch_<expression>{ sym,
                                                        std::move(boost::get<expr::do_<expression>>(
                                                          do_res.expect_ok()->data)) };
+          }
+          break;
+        case try_expression_type::catch_default:
+          {
+            if(has_finally)
+            {
+              return err(error{ "finally must be the last form of a try" });
+            }
+            if(has_catch_default)
+            {
+              return err(error{ "only one catch :default may be supplied" });
+            }
+            if(has_catch)
+            {
+              return err(error{ "catch :default must be the final catch" });
+            }
+            has_catch_default = true;
+
+            auto const catch_default_list(runtime::list(item));
+            auto const do_list(
+              catch_default_list->data.rest().rest().conj(make_box<runtime::obj::symbol>("do")));
+            auto do_res(analyze(make_box(do_list), catch_default_frame, position, fn_ctx, true));
+            if(do_res.is_err())
+            {
+              return do_res.expect_err_move();
+            }
+
+            ret.catch_default
+              = std::move(boost::get<expr::do_<expression>>(do_res.expect_ok()->data));
           }
           break;
         case try_expression_type::finally_:

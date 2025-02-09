@@ -62,6 +62,7 @@ namespace jank::analyze
       let,
       try_,
       catch_,
+      catch_default,
       finally
     };
 
@@ -79,6 +80,8 @@ namespace jank::analyze
           return "try_";
         case frame_type::catch_:
           return "catch_";
+        case frame_type::catch_default:
+          return "catch_default";
         case frame_type::finally:
           return "finally";
       }

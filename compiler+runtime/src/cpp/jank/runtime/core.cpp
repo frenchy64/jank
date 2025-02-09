@@ -600,37 +600,99 @@ namespace jank::runtime
     return o->type == object_type::tagged_literal;
   }
 
-  object_ptr catch_all(object_ptr const f,
-                       object_ptr const normal,
-                       object_ptr const caught,
-                       object_ptr const unknown)
+  //TODO exception wrapper object
+  object_ptr wrap_exception(std::exception const &e)
+  {
+    return make_box<obj::persistent_string>(e.what());
+  }
+
+  object_ptr wrap_exception(jank::native_persistent_string const &s)
+  {
+    return make_box<obj::persistent_string>(s);
+  }
+
+  object_ptr wrap_exception(jank::read::error const &e)
+  {
+    return make_box<obj::persistent_string>(
+        fmt::format("Read error ({} - {}): {}", e.start, e.end, e.message));
+  }
+
+  object_ptr try_finally(object_ptr const try_fn,
+                         object_ptr const finally_fn)
+  {
+    util::scope_exit const finally{ [=]() {
+      auto const finally_fn_obj(reinterpret_cast<object *>(finally_fn));
+      dynamic_call(finally_fn_obj);
+    } };
+    auto const try_fn_obj(reinterpret_cast<object *>(try_fn));
+    return dynamic_call(try_fn_obj);
+  }
+
+  object_ptr catch_exception(object_ptr const try_fn,
+                             object_ptr const catch_fn)
   {
     try
     {
-      return dynamic_call(normal, dynamic_call(f));
+      return dynamic_call(try_fn);
     }
-    /* TODO: Unify error handling. JEEZE! */
     catch(std::exception const &e)
     {
-      return dynamic_call(caught, make_box<obj::persistent_string>(e.what()));
+      return dynamic_call(catch_fn, wrap_exception(e));
     }
     catch(jank::runtime::object_ptr const o)
     {
-      return dynamic_call(caught, o);
+      return dynamic_call(catch_fn, o);
     }
     catch(jank::native_persistent_string const &s)
     {
-      return dynamic_call(caught, make_box<obj::persistent_string>(s));
+      return dynamic_call(catch_fn, wrap_exception(s));
     }
     catch(jank::read::error const &e)
     {
-      return dynamic_call(caught,
-                          make_box<obj::persistent_string>(
-                            fmt::format("Read error ({} - {}): {}", e.start, e.end, e.message)));
+      return dynamic_call(catch_fn, wrap_exception(e));
+    }
+  }
+
+  object_ptr catch_all(object_ptr const try_fn,
+                       object_ptr const catch_all_fn)
+  {
+    try
+    {
+      return dynamic_call(try_fn);
     }
     catch(...)
     {
-      return dynamic_call(unknown);
+      return dynamic_call(catch_all_fn);
+    }
+  }
+
+  object_ptr catch_all(object_ptr const try_fn,
+                       object_ptr const catch_fn,
+                       object_ptr const catch_all_fn)
+  {
+    try
+    {
+      return dynamic_call(try_fn);
+    }
+    catch(std::exception const &e)
+    {
+      return dynamic_call(catch_fn, wrap_exception(e));
+    }
+    catch(jank::runtime::object_ptr const o)
+    {
+      return dynamic_call(catch_fn, o);
+    }
+    catch(jank::native_persistent_string const &s)
+    {
+      return dynamic_call(catch_fn, wrap_exception(s));
+    }
+    catch(jank::read::error const &e)
+    {
+      return dynamic_call(catch_fn, wrap_exception(e));
+    }
+    catch(...)
+    {
+      return dynamic_call(catch_all_fn);
     }
   }
 }

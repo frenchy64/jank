@@ -34,14 +34,22 @@ namespace jank::analyze::expr
   struct try_ : expression_base
   {
     do_<E> body{};
-    catch_<E> catch_body{};
+    option<catch_<E>> catch_body{};
+    option<do_<E> catch_default_body{};
     option<do_<E>> finally_body{};
 
     void propagate_position(expression_position const pos)
     {
       position = pos;
       body.propagate_position(pos);
-      catch_body.propagate_position(pos);
+      if(catch_body)
+      {
+        catch_body.unwrap().propagate_position(pos);
+      }
+      if(catch_default_body)
+      {
+        catch_default_body.unwrap().propagate_position(pos);
+      }
       if(finally_body)
       {
         finally_body.unwrap().propagate_position(pos);

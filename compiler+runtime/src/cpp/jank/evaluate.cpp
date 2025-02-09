@@ -66,7 +66,14 @@ namespace jank::evaluate
     else if constexpr(std::same_as<T, expr::try_<expression>>)
     {
       walk(expr.body, f);
-      walk(expr.catch_body.body, f);
+      if(expr.catch_body.is_some())
+      {
+        walk(expr.catch_body.unwrap().body, f);
+      }
+      if(expr.catch_default_body.is_some())
+      {
+        walk(expr.catch_default_body.unwrap(), f);
+      }
       if(expr.finally_body.is_some())
       {
         walk(expr.finally_body.unwrap(), f);
@@ -627,16 +634,59 @@ namespace jank::evaluate
       }
     } };
 
-    try
+    //TODO re-use catch_* helpers?
+    if(expr.catch_body && expr.catch_default)
+    {
+      try
+      {
+        return eval(expr.body);
+      }
+      catch(object_ptr const e)
+      {
+        return dynamic_call(eval(wrap_expression(make_box<expression>(expr.catch_body.body),
+                                                 "catch",
+                                                 { expr.catch_body.sym })),
+                            e);
+      }
+      catch(...)
+      {
+        return dynamic_call(eval(wrap_expression(make_box<expression>(expr.catch_default_body.body),
+                                                 "catch_default",
+                                                 { expr.catch_default_body.sym })),
+                            e);
+      }
+    }
+    else if(expr.catch_body)
+    {
+      try
+      {
+        return eval(expr.body);
+      }
+      catch(object_ptr const e)
+      {
+        return dynamic_call(eval(wrap_expression(make_box<expression>(expr.catch_body.body),
+                                                 "catch",
+                                                 { expr.catch_body.sym })),
+                            e);
+      }
+    }
+    else if(expr.catch_default_body)
+    {
+      try
+      {
+        return eval(expr.body);
+      }
+      catch(...)
+      {
+        return dynamic_call(eval(wrap_expression(make_box<expression>(expr.catch_default_body.body),
+                                                 "catch_default",
+                                                 { expr.catch_default_body.sym })),
+                            e);
+      }
+    }
+    else
     {
       return eval(expr.body);
-    }
-    catch(object_ptr const e)
-    {
-      return dynamic_call(eval(wrap_expression(make_box<expression>(expr.catch_body.body),
-                                               "catch",
-                                               { expr.catch_body.sym })),
-                          e);
     }
   }
 }

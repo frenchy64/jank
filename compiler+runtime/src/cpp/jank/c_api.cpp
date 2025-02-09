@@ -838,27 +838,70 @@ extern "C"
     throw runtime::object_ptr{ reinterpret_cast<object *>(o) };
   }
 
-  jank_object_ptr jank_try(jank_object_ptr const try_fn,
-                           jank_object_ptr const catch_fn,
-                           jank_object_ptr const finally_fn)
+  jank_object_ptr jank_try_finally(jank_object_ptr const try_fn,
+                                   jank_object_ptr const finally_fn)
   {
-    util::scope_exit const finally{ [=]() {
-      auto const finally_fn_obj(reinterpret_cast<object *>(finally_fn));
-      if(finally_fn_obj != obj::nil::nil_const())
-      {
-        dynamic_call(finally_fn_obj);
-      }
-    } };
+    util::scope_exit const finally{ [=]() { jank_call0(finally_fn); } };
+    return jank_call0(try_fn_obj);
+  }
 
+  jank_object_ptr jank_try_catch(jank_object_ptr const try_fn,
+                                 jank_object_ptr const catch_fn)
+  {
     try
     {
-      auto const try_fn_obj(reinterpret_cast<object *>(try_fn));
-      return dynamic_call(try_fn_obj);
+      return jank_call0(try_fn);
+    }
+    catch(std::exception const &e)
+    {
+      return dynamic_call(reinterpret_cast<object *>(catch_fn), wrap_exception(e));
     }
     catch(object_ptr const e)
     {
-      auto const catch_fn_obj(reinterpret_cast<object *>(catch_fn));
-      return dynamic_call(catch_fn_obj, e);
+      return dynamic_call(reinterpret_cast<object *>(catch_fn), e);
+    }
+  }
+
+  jank_object_ptr jank_try_catch_default(jank_object_ptr const try_fn,
+                                         jank_object_ptr const catch_default_fn)
+  {
+    try
+    {
+      return jank_call0(try_fn);
+    }
+    catch(...)
+    {
+      return jank_call0(catch_default_fn);
+    }
+  }
+
+  jank_object_ptr jank_try_catch_all(jank_object_ptr const try_fn,
+                                     jank_object_ptr const catch_fn,
+                                     jank_object_ptr const catch_default_fn)
+  {
+    try
+    {
+      return jank_call0(try_fn);
+    }
+    catch(std::exception const &e)
+    {
+      return dynamic_call(reinterpret_cast<object *>(catch_fn), wrap_exception(e));
+    }
+    catch(object_ptr const e)
+    {
+      return dynamic_call(reinterpret_cast<object *>(catch_fn), e);
+    }
+    catch(jank::native_persistent_string const &s)
+    {
+      return dynamic_call(reinterpret_cast<object *>(catch_fn), wrap_exception(e));
+    }
+    catch(jank::read::error const &e)
+    {
+      return dynamic_call(reinterpret_cast<object *>(catch_fn), wrap_exception(e));
+    }
+    catch(...)
+    {
+      return jank_call0(catch_default_fn);
     }
   }
 
