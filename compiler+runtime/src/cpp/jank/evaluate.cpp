@@ -643,17 +643,14 @@ namespace jank::evaluate
       }
       catch(object_ptr const e)
       {
-        return dynamic_call(eval(wrap_expression(make_box<expression>(expr.catch_body.body),
+        return dynamic_call(eval(wrap_expression(make_box<expression>(expr.catch_body.unwrap().body),
                                                  "catch",
-                                                 { expr.catch_body.sym })),
+                                                 { expr.catch_body.unwrap().sym })),
                             e);
       }
       catch(...)
       {
-        return dynamic_call(eval(wrap_expression(make_box<expression>(expr.catch_default_body.body),
-                                                 "catch_default",
-                                                 { expr.catch_default_body.sym })),
-                            e);
+        return eval(expr.catch_default_body.unwrap());
       }
     }
     else if(expr.catch_body)
@@ -664,9 +661,9 @@ namespace jank::evaluate
       }
       catch(object_ptr const e)
       {
-        return dynamic_call(eval(wrap_expression(make_box<expression>(expr.catch_body.body),
+        return dynamic_call(eval(wrap_expression(make_box<expression>(expr.catch_body.unwrap().body),
                                                  "catch",
-                                                 { expr.catch_body.sym })),
+                                                 { expr.catch_body.unwrap().sym })),
                             e);
       }
     }
@@ -678,10 +675,7 @@ namespace jank::evaluate
       }
       catch(...)
       {
-        return dynamic_call(eval(wrap_expression(make_box<expression>(expr.catch_default_body.body),
-                                                 "catch_default",
-                                                 { expr.catch_default_body.sym })),
-                            e);
+        return eval(expr.catch_default_body.unwrap());
       }
     }
     else
