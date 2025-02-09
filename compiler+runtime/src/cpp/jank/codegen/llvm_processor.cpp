@@ -921,6 +921,61 @@ namespace jank::codegen
   llvm::Value *llvm_processor::gen(expr::try_<expression> const &expr,
                                    expr::function_arity<expression> const &arity)
   {
+    // https://llvm.org/docs/LangRef.html#id344
+    // finally == landingpad ? cleanup ?
+    if(!expr.catch_body && !expr.finally_body)
+    {
+      //???? https://github.com/llvm/llvm-project/blob/04e5ea5237da5c49d05cd9499a5f0eb325638cf9/llvm/examples/ExceptionDemo/ExceptionDemo.cpp#L1089
+      //  llvm::Function *ret = createFunction(module,
+      //                                       builder.getVoidTy(),
+      //                                       argTypes,
+      //                                       argNames,
+      //                                       ourId,
+      //                                       llvm::Function::ExternalLinkage,
+      //                                       false,
+      //                                       false);
+      //???? maybe something like this
+      auto const fn_type(llvm::FunctionType::get(ctx->builder->getPtrTy(), false));
+      auto const name(munge(root_fn.unique_name));
+      auto const ret(llvm::Function::Create(fn_type,
+                                            llvm::Function::ExternalLinkage,
+                                            name.c_str(),
+                                            *ctx->module));
+
+      // Block which calls invoke
+      llvm::BasicBlock *entryBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx,
+                                                              "entry",
+                                                              ret);
+      // Normal block for invoke
+      llvm::BasicBlock *normalBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx,
+                                                               "normal",
+                                                               ret);
+      // Unwind block for invoke
+      llvm::BasicBlock *exceptionBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx,
+                                                                  "exception",
+                                                                  ret);
+
+      // Block which routes exception to correct catch handler block
+      llvm::BasicBlock *exceptionRouteBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx,
+                                                                 "exceptionRoute",
+                                                                 ret);
+
+      // Foreign exception handler
+      llvm::BasicBlock *externalExceptionBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx,
+                                                              "externalException",
+                                                              ret);
+
+      // Block which calls _Unwind_Resume
+      llvm::BasicBlock *unwindResumeBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx,
+                                                                   "unwindResume",
+                                                                   ret);
+
+      // Clean up block which delete exception if needed
+      llvm::BasicBlock *endBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx, "end", ret);
+    }
+    //TODO LLVM IR
+    else
+    {
     auto const wrapped_body(
       evaluate::wrap_expression(make_box<expression>(expr.body), "try_body", {}));
     auto const wrapped_catch(expr.catch_body.map([](auto const &catch_body) {
@@ -994,6 +1049,7 @@ namespace jank::codegen
     }
 
     return ctx->builder->CreateLoad(ctx->builder->getPtrTy(), global);
+    }
   }
 
   llvm::Value *llvm_processor::gen_c_string(native_persistent_string const &s) const
