@@ -35,7 +35,7 @@ namespace jank::analyze::expr
   {
     do_<E> body{};
     option<catch_<E>> catch_body{};
-    option<do_<E> catch_default_body{};
+    option<do_<E>> catch_default_body{};
     option<do_<E>> finally_body{};
 
     void propagate_position(expression_position const pos)
