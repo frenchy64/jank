@@ -942,36 +942,13 @@ namespace jank::codegen
                                             name.c_str(),
                                             *ctx->module));
 
-      // Block which calls invoke
-      llvm::BasicBlock *entryBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx,
-                                                              "entry",
-                                                              ret);
-      // Normal block for invoke
-      llvm::BasicBlock *normalBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx,
-                                                               "normal",
-                                                               ret);
-      // Unwind block for invoke
-      llvm::BasicBlock *exceptionBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx,
-                                                                  "exception",
-                                                                  ret);
-
-      // Block which routes exception to correct catch handler block
-      llvm::BasicBlock *exceptionRouteBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx,
-                                                                 "exceptionRoute",
-                                                                 ret);
-
-      // Foreign exception handler
-      llvm::BasicBlock *externalExceptionBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx,
-                                                              "externalException",
-                                                              ret);
-
-      // Block which calls _Unwind_Resume
-      llvm::BasicBlock *unwindResumeBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx,
-                                                                   "unwindResume",
-                                                                   ret);
-
-      // Clean up block which delete exception if needed
-      llvm::BasicBlock *endBlock = llvm::BasicBlock::Create(*ctx->llvm_ctx, "end", ret);
+      auto const entryBlock(llvm::BasicBlock::Create(*ctx->llvm_ctx, "entry", ret)); // Block which calls invoke
+      auto const normalBlock(llvm::BasicBlock::Create(*ctx->llvm_ctx, "normal", ret)); // Normal block for invoke
+      auto const exceptionBlock(llvm::BasicBlock::Create(*ctx->llvm_ctx, "exception", ret)); // Unwind block for invoke
+      auto const exceptionRouteBlock(llvm::BasicBlock::Create(*ctx->llvm_ctx, "exceptionRoute", ret)); // Block which routes exception to correct catch handler block
+      auto const externalExceptionBlock(llvm::BasicBlock::Create(*ctx->llvm_ctx, "externalException", ret)); // Foreign exception handler
+      auto const unwindResumeBlock(llvm::BasicBlock::Create(*ctx->llvm_ctx, "unwindResume", ret)); // Block which calls _Unwind_Resume
+      auto const endBlock(llvm::BasicBlock::Create(*ctx->llvm_ctx, "end", ret)); // Clean up block which delete exception if needed
     }
     //TODO LLVM IR
     else
