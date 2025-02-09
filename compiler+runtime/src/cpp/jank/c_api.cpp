@@ -842,7 +842,7 @@ extern "C"
                                    jank_object_ptr const finally_fn)
   {
     util::scope_exit const finally{ [=]() { jank_call0(finally_fn); } };
-    return jank_call0(try_fn_obj);
+    return jank_call0(try_fn);
   }
 
   jank_object_ptr jank_try_catch(jank_object_ptr const try_fn,
