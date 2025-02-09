@@ -1,8 +1,8 @@
 name: "Build"
 
+# TEMPORARY CHANGES FOR EXPERIMENTING ON FORK
 on:
   pull_request:
-  push:
 
 jobs:
   test:
@@ -15,26 +15,6 @@ jobs:
           - name: Ubuntu - lint
             os: ubuntu-24.04
             lint: true
-          ## Debug + clang-tidy + coverage
-          - name: Ubuntu - debug, analysis, coverage
-            os: ubuntu-24.04
-            build_type: Debug
-            sanitize: none
-            coverage: on
-            analyze: on
-          ## Debug + sanitization
-          - name: Ubuntu - address sanitizer
-            os: ubuntu-24.04
-            build_type: Debug
-            sanitize: address
-          - name: Ubuntu - undefined behavior sanitizer
-            os: ubuntu-24.04
-            build_type: Debug
-            sanitize: undefined
-          - name: Ubuntu - thread sanitizer
-            os: ubuntu-24.04
-            build_type: Debug
-            sanitize: thread
           ## Release
           - name: Ubuntu - release
             os: ubuntu-24.04
@@ -51,7 +31,7 @@ jobs:
       JANK_SANITIZE: ${{ matrix.sanitize }}
       ASAN_OPTIONS: detect_leaks=0
       TERM: xterm
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
