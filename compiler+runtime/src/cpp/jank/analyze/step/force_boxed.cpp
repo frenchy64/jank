@@ -40,15 +40,15 @@ namespace jank::analyze::step
           {
             boost::apply_visitor(f, typed_expr.body.values.back()->data);
           }
-          if(typed_expr.catch_body && !typed_expr.catch_body.body.values.empty())
+          //TODO <option>.map(..)
+          if(typed_expr.catch_body.is_some() && !typed_expr.catch_body.unwrap().body.values.empty())
           {
-            boost::apply_visitor(f, typed_expr.catch_body.body.values.back()->data);
+            boost::apply_visitor(f, typed_expr.catch_body.unwrap().body.values.back()->data);
           }
-          if(typed_expr.catch_default && !typed_expr.catch_default.body.values.empty())
+          if(typed_expr.catch_default_body.is_some() && !typed_expr.catch_default_body.unwrap().values.empty())
           {
-            boost::apply_visitor(f, typed_expr.catch_default.body.values.back()->data);
+            boost::apply_visitor(f, typed_expr.catch_default_body.unwrap().values.back()->data);
           }
-          //finally?
         }
         else
         {

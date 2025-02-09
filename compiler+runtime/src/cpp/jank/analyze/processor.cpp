@@ -992,7 +992,7 @@ namespace jank::analyze
     };
 
     static runtime::obj::symbol catch_{ "catch" }, finally_{ "finally" };
-    static runtime::obj::keyword default_kw{ "default" };
+    static runtime::obj::keyword default_kw{ rt_ctx.intern_keyword("", "default", true).expect_ok() };
     native_bool has_catch{}, has_catch_default{}, has_finally{};
 
     for(auto it(next_in_place(list->fresh_seq())); it != nullptr; it = next_in_place(it))
@@ -1017,6 +1017,7 @@ namespace jank::analyze
               {
                 return try_expression_type::catch_default;
               }
+              else
               {
                 return try_expression_type::catch_;
               }
