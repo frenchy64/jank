@@ -938,8 +938,6 @@ namespace jank::codegen
     auto const finally(
       wrapped_finally.map([&](auto const &finally) { return gen(finally, arity); }));
 
-    llvm::Value *call{};
-
     auto const fn_type(llvm::FunctionType::get(
       ctx->builder->getPtrTy(),
       { ctx->builder->getPtrTy(), ctx->builder->getPtrTy(), ctx->builder->getPtrTy() },
@@ -951,7 +949,7 @@ namespace jank::codegen
       catch_.unwrap_or(gen_global(obj::nil::nil_const())),
       finally.unwrap_or(gen_global(obj::nil::nil_const()))
     };
-    call = ctx->builder->CreateCall(fn, args);
+    auto const call(ctx->builder->CreateCall(fn, args));
 
     if(expr.position == expression_position::tail)
     {
