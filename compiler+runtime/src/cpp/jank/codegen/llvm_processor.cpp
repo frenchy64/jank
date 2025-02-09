@@ -984,7 +984,9 @@ namespace jank::codegen
         { ctx->builder->getPtrTy(), ctx->builder->getPtrTy() },
         false));
       auto const fn(ctx->module->getOrInsertFunction("jank_try_finally", fn_type));
-      llvm::SmallVector<llvm::Value *, 2> const args{ call, finally };
+      llvm::SmallVector<llvm::Value *, 2> const args{
+        call, //TODO wrap try body in thunk!
+          finally };
       call = ctx->builder->CreateCall(fn, args);
     }
 
