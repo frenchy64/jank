@@ -1,0 +1,3 @@
+(assert (= 42 (try 42)))
+
+:success

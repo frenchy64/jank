@@ -1084,9 +1084,11 @@ namespace jank::analyze
               return do_res.expect_err_move();
             }
 
-            ret.catch_body = expr::catch_<expression>{ sym,
-                                                       std::move(boost::get<expr::do_<expression>>(
-                                                         do_res.expect_ok()->data)) };
+            auto const cb{expr::catch_<expression>{ sym,
+                                                    std::move(boost::get<expr::do_<expression>>(
+                                                      do_res.expect_ok()->data)) }};
+            ret.catch_body
+              = std::move(cb);
           }
           break;
         case try_expression_type::finally_:
@@ -1116,14 +1118,12 @@ namespace jank::analyze
       }
     }
 
-    if(!has_catch)
-    {
-      return err(error{ "each try must have a catch clause" });
-    }
-
     ret.body.frame = try_frame;
     ret.body.propagate_position(position);
-    ret.catch_body.body.frame = catch_frame;
+    if(ret.catch_body.is_some())
+    {
+      ret.catch_body.unwrap().body.frame = catch_frame;
+    }
     if(ret.finally_body.is_some())
     {
       ret.finally_body.unwrap().frame = finally_frame;
