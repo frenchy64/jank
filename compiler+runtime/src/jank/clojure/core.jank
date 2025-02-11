@@ -6600,8 +6600,9 @@ fails, attempts to require sym's namespace and retries."
                          (list n `(fn ~@(map (fn [[argv]]
                                                (assert (vector? argv))
                                                (let [vararg (when (some #(= '& %) argv) (gensym "vararg"))
-                                                     gargs (mapv #(gensym (symbol (str "arg" %)))
-                                                                 (range (cond-> (count argv) vararg (- 2))))
+                                                     gargs (mapv #(gensym (str "arg" %))
+                                                                 (range (cond-> (count argv)
+                                                                          vararg (- 2))))
                                                      decl (cond-> gargs
                                                             vararg (conj '& vararg))
                                                      vol (n->vol n)]
