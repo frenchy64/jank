@@ -6592,11 +6592,16 @@ fails, attempts to require sym's namespace and retries."
         names (map first pairs)
         gm (gensym 'm)]
     `(let [~gm (volatile! {})
-           ~@(mapcat (fn [[n [_ _ dargs & body]]]
-                       (assert (vector? dargs) "TODO letfn multi arity")
-                       (assert (not-any? #{'&} dargs) "TODO varargs")
-                       (let [sargs (mapv #(gensym (symbol (str "arg" %))) (range (count dargs)))]
-                         (list n `(fn ~sargs ((@~gm '~n) ~@sargs)))))
+           ~@(mapcat (fn [[n [_ self & tail]]]
+                       (assert (simple-symbol? self))
+                       (let [arities (cond-> tail
+                                       (vector? (first tail)) list)]
+                         (list n `(fn ~@(map (fn [[argv]]
+                                               (assert (vector? argv))
+                                               (assert (not-any? #{'&} argv) (str "TODO varargs: " (pr-str argv)))
+                                               (let [gargs (mapv #(gensym (symbol (str "arg" %))) (range (count argv)))]
+                                                 `(~gargs ((@~gm '~n) ~@gargs))))
+                                             arities)))))
                      pairs)
            ~@bindings]
        (vreset! ~gm ~(into {} (map #(do [(list 'quote %) %])) names))
