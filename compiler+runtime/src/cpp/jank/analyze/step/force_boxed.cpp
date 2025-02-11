@@ -27,14 +27,8 @@ namespace jank::analyze::step
             boost::apply_visitor(f, typed_expr.values.back()->data);
           }
         }
-        else if constexpr(std::same_as<T, expr::let<expression>>)
-        {
-          if(!typed_expr.body.values.empty())
-          {
-            boost::apply_visitor(f, typed_expr.body.values.back()->data);
-          }
-        }
-        else if constexpr(std::same_as<T, expr::letfn<expression>>)
+        else if constexpr(std::same_as<T, expr::let<expression>>
+                          || std::same_as<T, expr::letfn<expression>>)
         {
           if(!typed_expr.body.values.empty())
           {
