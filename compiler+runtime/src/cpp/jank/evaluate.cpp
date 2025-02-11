@@ -55,11 +55,7 @@ namespace jank::evaluate
         walk(form, f);
       }
     }
-    else if constexpr(std::same_as<T, expr::let<expression>>)
-    {
-      walk(expr.body, f);
-    }
-    else if constexpr(std::same_as<T, expr::letfn<expression>>)
+    else if constexpr(std::same_as<T, expr::let<expression>> || std::same_as<T, expr::letfn<expression>>)
     {
       walk(expr.body, f);
     }

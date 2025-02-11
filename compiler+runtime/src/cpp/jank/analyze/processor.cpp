@@ -711,8 +711,8 @@ namespace jank::analyze
     auto const bindings_obj(o->data.rest().first().unwrap());
     if(bindings_obj->type != runtime::object_type::persistent_vector)
     {
-      return err(error{
-        fmt::format("invalid letfn* bindings: must be a vector, not {}", to_string(bindings_obj)) });
+      return err(error{ fmt::format("invalid letfn* bindings: must be a vector, not {}",
+                                    to_string(bindings_obj)) });
     }
 
     auto const bindings(runtime::expect_object<runtime::obj::persistent_vector>(bindings_obj));
