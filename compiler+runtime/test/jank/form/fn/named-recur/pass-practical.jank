@@ -1,10 +1,10 @@
 (def count-loops 0)
 (assert (= 0
-           ((fn* cnt [n]
+           ((fn* count [n]
               (def count-loops (inc count-loops))
               (if (zero? n)
                 n
-                (cnt (dec n))))
+                (count (dec n))))
             10)))
 (assert (= 11 count-loops))
 
