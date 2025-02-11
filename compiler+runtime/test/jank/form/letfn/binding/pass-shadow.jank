@@ -1,0 +1,5 @@
+(letfn* [(a [] 1)
+         (a [] 2)]
+  (assert (= (a) 2)))
+
+:success
