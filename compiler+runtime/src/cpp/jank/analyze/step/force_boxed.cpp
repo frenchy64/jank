@@ -34,6 +34,13 @@ namespace jank::analyze::step
             boost::apply_visitor(f, typed_expr.body.values.back()->data);
           }
         }
+        else if constexpr(std::same_as<T, expr::letfn<expression>>)
+        {
+          if(!typed_expr.body.values.empty())
+          {
+            boost::apply_visitor(f, typed_expr.body.values.back()->data);
+          }
+        }
         else if constexpr(std::same_as<T, expr::try_<expression>>)
         {
           if(!typed_expr.body.values.empty())
