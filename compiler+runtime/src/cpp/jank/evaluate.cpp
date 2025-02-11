@@ -605,7 +605,7 @@ namespace jank::evaluate
 
   object_ptr eval(expr::letfn<expression> const &expr)
   {
-    return dynamic_call(eval(wrap_expression(expr, "let", {})));
+    return dynamic_call(eval(wrap_expression(expr, "letfn", {})));
   }
 
   object_ptr eval(expr::if_<expression> const &expr)
