@@ -62,17 +62,17 @@ namespace jank::runtime
 
   native_bool is_seqable(object_ptr const o)
   {
-    return object_behaviors(o)->is_seqable;
+    return object_behaviors(o).is_seqable;
   }
 
   native_bool is_sequential(object_ptr const o)
   {
-    return object_behaviors(o)->is_sequential;
+    return object_behaviors(o).is_sequential;
   }
 
   native_bool is_collection(object_ptr const o)
   {
-    return object_behaviors(o)->is_collection;
+    return object_behaviors(o).is_collection;
   }
 
   native_bool is_list(object_ptr const o)
@@ -96,7 +96,7 @@ namespace jank::runtime
 
   native_bool is_associative(object_ptr const o)
   {
-    return object_behaviors(o)->is_associative;
+    return object_behaviors(o).is_associative;
   }
 
   native_bool is_set(object_ptr const o)
@@ -107,12 +107,12 @@ namespace jank::runtime
 
   native_bool is_counter(object_ptr const o)
   {
-    return object_behaviors(o)->is_counter;
+    return object_behaviors(o).is_counter;
   }
 
   native_bool is_transientable(object_ptr const o)
   {
-    return object_behaviors(o)->is_transientable;
+    return object_behaviors(o).is_transientable;
   }
 
   native_bool is_sorted(object_ptr const o)
@@ -926,13 +926,13 @@ namespace jank::runtime
       s);
     /*
     auto const bs(object_behaviors(s));
-    if(bs->is_seqable)
+    if(bs.is_seqable)
     {
       return obj::persistent_list::create(s);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs->to_string(s)) };
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
     }
     */
   }
@@ -946,13 +946,13 @@ namespace jank::runtime
       s);
     /*
     auto const bs(object_behaviors(s));
-    if(bs->is_seqable)
+    if(bs.is_seqable)
     {
       return obj::persistent_vector::create(s);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs->to_string(s)) };
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
     }
     */
   }
@@ -1107,14 +1107,14 @@ namespace jank::runtime
       o);
     /*
     auto const bs(object_behaviors(o));
-    if (bs->is_chunkable)
+    if (bs.is_chunkable)
     {
-      assert(bs->chunked_first);
-      return bs->chunked_first(o);
+      assert(bs.chunked_first);
+      return bs.chunked_first(o);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not chunkable: {}", bs->to_string(o)) };
+      throw std::runtime_error{ fmt::format("not chunkable: {}", bs.to_string(o)) };
     }
     */
   }
@@ -1136,14 +1136,14 @@ namespace jank::runtime
       o);
     /*
     auto const bs(object_behaviors(o));
-    if (bs->is_chunkable)
+    if (bs.is_chunkable)
     {
-      assert(bs->chunked_first);
-      return bs->chunked_first(o) ?: obj::nil::nil_const();
+      assert(bs.chunked_first);
+      return bs.chunked_first(o) ?: obj::nil::nil_const();
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not chunkable: {}", bs->to_string(o)) };
+      throw std::runtime_error{ fmt::format("not chunkable: {}", bs.to_string(o)) };
     }
     */
   }
@@ -1165,14 +1165,14 @@ namespace jank::runtime
       o);
     /*
     auto const bs(object_behaviors(o));
-    if (bs->is_chunkable)
+    if (bs.is_chunkable)
     {
-      assert(bs->chunked_next);
-      return bs->chunked_next(o) ?: obj::persistent_list::empty();
+      assert(bs.chunked_next);
+      return bs.chunked_next(o) ?: obj::persistent_list::empty();
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not chunkable: {}", bs->to_string(o)) };
+      throw std::runtime_error{ fmt::format("not chunkable: {}", bs.to_string(o)) };
     }
     */
   }
@@ -1187,7 +1187,7 @@ namespace jank::runtime
     //fmt::println("bool {} {}", runtime::to_string(o), object_type_str(o->type));
     //object_behaviors(o);  //TODO segfault
     //assert(bs);
-    //throw std::runtime_error{ fmt::format("bool {}", bs->is_chunkable) };
+    //throw std::runtime_error{ fmt::format("bool {}", bs.is_chunkable) };
     return visit_object(
       [=](auto const typed_o) -> native_bool {
         using T = typename decltype(typed_o)::value_type;
