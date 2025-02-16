@@ -1136,17 +1136,7 @@ namespace jank::runtime
 
   native_bool is_chunked_seq(object_ptr const o)
   {
-    //fmt::println("bool {} {}", runtime::to_string(o), object_type_str(o->type));
-    //object_behaviors(o);  //TODO segfault
-    //assert(bs);
-    //throw std::runtime_error{ fmt::format("bool {}", bs.is_chunkable) };
-    return visit_object(
-      [=](auto const typed_o) -> native_bool {
-        using T = typename decltype(typed_o)::value_type;
-
-        return behavior::chunkable<T>;
-      },
-      o);
+    return object_behaviors(o).is_chunkable;
   }
 
   object_ptr iterate(object_ptr const fn, object_ptr const o)
