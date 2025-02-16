@@ -426,18 +426,12 @@ namespace jank::runtime
 
   native_bool is_callable(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> native_bool {
-        using T = typename decltype(typed_o)::value_type;
-
-        return std::is_base_of_v<behavior::callable, T>;
-      },
-      o);
+    return object_behaviors(o).is_callable;
   }
 
   native_hash to_hash(object_ptr const o)
   {
-    return visit_object([=](auto const typed_o) -> native_hash { return typed_o->to_hash(); }, o);
+    return object_behaviors(o).to_hash(o);
   }
 
   object_ptr macroexpand1(object_ptr const o)

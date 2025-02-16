@@ -726,8 +726,6 @@ namespace jank::runtime
     requires behavior::object_like<T>
     behaviors(native_box<T>)
     {
-      //how to just return base?
-      //this->is_base_of_v = []<typename U>(std::is_class_v<U> const c) { return std::is_base_of_v<c, T>; };
       if constexpr(behavior::object_like<T>)
       {
         this->is_object_like = true;
@@ -744,6 +742,13 @@ namespace jank::runtime
       if constexpr(behavior::sequenceable<T>)
       {
         this->is_seq = true;
+        this->first = [](object_ptr const o) { return expect_object<T>(o)->first(); };
+        this->next = [](object_ptr const o) { return expect_object<T>(o)->first(); };
+      }
+      if constexpr(behavior::sequenceable_in_place<T>)
+      {
+        this->is_sequenceable_in_place = true;
+        this->next_in_place = [](object_ptr const o) { return expect_object<T>(o)->next_in_place(); };
       }
       if constexpr(behavior::collection_like<T>)
       {
@@ -787,6 +792,10 @@ namespace jank::runtime
           expect_object<T>(o)->meta = behavior::detail::validate_meta(meta_obj);
           return meta_obj;
         };
+      }
+      if constexpr(std::is_base_of_v<behavior::callable, T>)
+      {
+        this->is_callable = true;
       }
       if constexpr(behavior::function_like<T>)
       {
@@ -836,14 +845,20 @@ namespace jank::runtime
     native_bool is_function_like{};
     native_bool is_named{};
     native_bool is_derefable{};
-
-    //template<typename U>
-    //std::function<bool(std::is_class_v<U> const c)> is_base_of_v{};
+    native_bool is_callable{};
+    native_bool is_sequenceable_in_place{};
 
     /* behavior::object_like */
     std::function<native_persistent_string(object_ptr const)> to_string{};
     std::function<native_hash(object_ptr const)> to_hash{};
     std::function<native_bool(object_ptr const, object_ptr const)> equal{};
+
+    /* behavior::sequenceable */
+    std::function<object_ptr(object_ptr const)> first{};
+    std::function<object_ptr(object_ptr const)> next{};
+
+    /* behavior::sequenceable_in_place */
+    std::function<object_ptr(object_ptr const)> next_in_place{};
 
     /* behavior::derefable */
     std::function<object_ptr(object_ptr const)> deref{};
