@@ -784,6 +784,7 @@ namespace jank::runtime
     //native_bool is_sorted{};
     native_bool is_chunk_like{};
     native_bool is_chunkable{};
+
     /* behavior::object_like */
     std::function<native_persistent_string(object_ptr const)> to_string{};
     
