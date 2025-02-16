@@ -724,11 +724,14 @@ namespace jank::runtime
     requires behavior::object_like<T>
     behaviors(native_box<T>)
     {
+      //how to just return base?
+      //this->is_base_of_v = []<typename U>(std::is_class_v<U> const c) { return std::is_base_of_v<c, T>; };
       if constexpr(behavior::object_like<T>)
       {
         this->is_object_like = true;
         this->to_string = [](object_ptr const o) { return expect_object<T>(o)->to_string(); };
         this->to_hash = [](object_ptr const o) { return expect_object<T>(o)->to_hash(); };
+        this->equal = [](object_ptr const lhs, object_ptr const rhs) { return expect_object<T>(lhs)->equal(*rhs); };
       }
       if constexpr(behavior::seqable<T>)
       {
@@ -809,9 +812,13 @@ namespace jank::runtime
     native_bool is_metadatable{};
     native_bool is_function_like{};
 
+    //template<typename U>
+    //std::function<bool(std::is_class_v<U> const c)> is_base_of_v{};
+
     /* behavior::object_like */
     std::function<native_persistent_string(object_ptr const)> to_string{};
     std::function<native_hash(object_ptr const)> to_hash{};
+    std::function<native_bool(object_ptr const, object_ptr const)> equal{};
 
     /* behavior::metadatable */
     std::function<void(object_ptr const, object_ptr const meta_obj)> set_meta{};

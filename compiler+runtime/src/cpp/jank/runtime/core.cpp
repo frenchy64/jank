@@ -254,7 +254,7 @@ namespace jank::runtime
       return !lhs;
     }
 
-    return visit_object([&](auto const typed_lhs) { return typed_lhs->equal(*rhs); }, lhs);
+    return object_behaviors(lhs).equal(lhs, rhs);
   }
 
   object_ptr meta(object_ptr const m)
