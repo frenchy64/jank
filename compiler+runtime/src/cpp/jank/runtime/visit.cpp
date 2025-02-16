@@ -23,6 +23,7 @@ namespace jank::runtime
       [&](auto const typed_o) -> behaviors {
         using T = typename decltype(typed_o)::value_type;
 
+        // TODO: cache
         behaviors bs{};
         if constexpr(behavior::seqable<T>)
         {
@@ -39,6 +40,14 @@ namespace jank::runtime
         if constexpr(behavior::associatively_readable<T> && behavior::associatively_writable<T>)
         {
           bs.is_associative = true;
+        }
+        if constexpr(behavior::countable<T>)
+        {
+          bs.is_counter = true;
+        }
+        if constexpr(behavior::transientable<T>)
+        {
+          bs.is_transientable = true;
         }
 
         return bs;

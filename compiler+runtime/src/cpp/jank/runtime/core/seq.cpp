@@ -107,24 +107,12 @@ namespace jank::runtime
 
   native_bool is_counter(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> native_bool {
-        using T = typename decltype(typed_o)::value_type;
-
-        return behavior::countable<T>;
-      },
-      o);
+    return object_behaviors(o).is_counter;
   }
 
   native_bool is_transientable(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> native_bool {
-        using T = typename decltype(typed_o)::value_type;
-
-        return behavior::transientable<T>;
-      },
-      o);
+    return object_behaviors(o).is_transientable;
   }
 
   native_bool is_sorted(object_ptr const o)
