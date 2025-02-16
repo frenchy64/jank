@@ -737,6 +737,8 @@ namespace jank::runtime
       if constexpr(behavior::seqable<T>)
       {
         this->is_seqable = true;
+        this->seq = [](object_ptr const o) { return expect_object<T>(o)->seq(); };
+        this->fresh_seq = [](object_ptr const o) { return expect_object<T>(o)->fresh_seq(); };
       }
       if constexpr(behavior::sequenceable<T>)
       {
@@ -833,6 +835,10 @@ namespace jank::runtime
     std::function<native_persistent_string(object_ptr const)> to_string{};
     std::function<native_hash(object_ptr const)> to_hash{};
     std::function<native_bool(object_ptr const, object_ptr const)> equal{};
+
+    /* behavior::seqable */
+    std::function<object_ptr(object_ptr const)> seq{};
+    std::function<object_ptr(object_ptr const)> fresh_seq{};
 
     /* behavior::metadatable */
     std::function<object_ptr(object_ptr const, object_ptr const)> with_meta{};
