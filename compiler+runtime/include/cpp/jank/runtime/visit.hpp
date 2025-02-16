@@ -721,6 +721,8 @@ namespace jank::runtime
       std::forward<Args>(args)...);
   }
 
+  // TODO try splitting up
+  // TODO behaviors<T>
   struct behaviors
   {
     template <typename T>
@@ -858,6 +860,11 @@ namespace jank::runtime
       {
         this->is_set = true;
       }
+      if constexpr(behavior::conjable_in_place<T>)
+      {
+        this->is_conjable_in_place = true;
+        this->conj_in_place = [](object_ptr const o, object_ptr const v) { return try_object<T>(o)->conj_in_place(v); };
+      }
     }
 
     //native_bool is_list{};
@@ -896,9 +903,6 @@ namespace jank::runtime
 
     /* behavior::sequenceable_in_place */
     std::function<object_ptr(object_ptr const)> next_in_place{};
-
-    /* behavior::conjable_in_place */
-    std::function<object_ptr(object_ptr const)> conj_in_place{};
 
     /* behavior::derefable */
     std::function<object_ptr(object_ptr const)> deref{};
