@@ -741,7 +741,7 @@ namespace jank::runtime
       }
       if constexpr(behavior::sequenceable<T>)
       {
-        this->is_seq = true;
+        this->is_sequenceable = true;
         this->first = [](object_ptr const o) { return expect_object<T>(o)->first(); };
         this->next = [](object_ptr const o) { return expect_object<T>(o)->first(); };
       }
@@ -827,7 +827,7 @@ namespace jank::runtime
 
     //native_bool is_empty{};
     native_bool is_object_like{};
-    native_bool is_seq{};
+    native_bool is_sequenceable{};
     native_bool is_sequential{};
     native_bool is_seqable{};
     native_bool is_collection{};
