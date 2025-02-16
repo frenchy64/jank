@@ -83,44 +83,37 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(object_behaviors(source));
+    if(bs.is_function_like || bs.is_callable)
+    {
+      auto const arity_flags(bs.get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-
-          switch(mask)
+      switch(mask)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs.call1(source, make_box<obj::native_array_sequence>(a1, a2));
+        case callable::mask_variadic_arity(1):
+          return bs.call2(source, a1, make_box<obj::native_array_sequence>(a2));
+        case callable::mask_variadic_arity(2):
+          if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(make_box<obj::native_array_sequence>(a1, a2));
-            case callable::mask_variadic_arity(1):
-              return typed_source->call(a1, make_box<obj::native_array_sequence>(a2));
-            case callable::mask_variadic_arity(2):
-              if(!callable::is_variadic_ambiguous(arity_flags))
-              {
-                return typed_source->call(a1, a2, obj::nil::nil_const());
-              }
-            default:
-              return typed_source->call(a1, a2);
+            return bs.call3(source, a1, a2, obj::nil::nil_const());
           }
-        }
-        else if constexpr(std::same_as<T, obj::persistent_hash_map>
-                          || std::same_as<T, obj::persistent_array_map>
-                          || std::same_as<T, obj::transient_hash_set>
-                          || std::same_as<T, obj::keyword>)
-        {
-          return typed_source->call(a1, a2);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 2 args to: {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        default:
+          return bs.call2(source, a1, a2);
+      }
+    }
+    auto const call2(bs.call2);
+    if (call2 != nullptr)
+    {
+      return call2(source, a1, a2);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 2 args to: {}",
+                                            bs.to_string(source)) };
+    }
   }
 
   object_ptr
