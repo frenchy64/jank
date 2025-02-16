@@ -89,9 +89,7 @@ namespace jank::runtime
 
   native_bool is_map(object_ptr const o)
   {
-    return (o->type == object_type::persistent_hash_map
-            || o->type == object_type::persistent_array_map
-            || o->type == object_type::persistent_sorted_map);
+    return object_behaviors(o).is_map;
   }
 
   native_bool is_associative(object_ptr const o)
@@ -101,8 +99,7 @@ namespace jank::runtime
 
   native_bool is_set(object_ptr const o)
   {
-    return (o->type == object_type::persistent_hash_set
-            || o->type == object_type::persistent_sorted_set);
+    return object_behaviors(o).is_set;
   }
 
   native_bool is_counter(object_ptr const o)
@@ -123,38 +120,28 @@ namespace jank::runtime
 
   object_ptr transient(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::transientable<T>)
-        {
-          return typed_o->to_transient();
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not transientable: {}", typed_o->to_string()) };
-        }
-      },
-      o);
+    auto const bs(object_behaviors(o));
+    if (bs.is_transientable)
+    {
+      return bs.to_transient(o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not transientable: {}", bs.to_string(o)) };
+    }
   }
 
   object_ptr persistent(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::persistentable<T>)
-        {
-          return typed_o->to_persistent();
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not persistentable: {}", typed_o->to_string()) };
-        }
-      },
-      o);
+    auto const bs(object_behaviors(o));
+    if (bs.is_persistentable)
+    {
+      return bs.to_persistent(o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not persistentable: {}", bs.to_string(o)) };
+    }
   }
 
   object_ptr conj_in_place(object_ptr const coll, object_ptr const o)

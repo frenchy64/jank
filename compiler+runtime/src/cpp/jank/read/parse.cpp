@@ -471,27 +471,26 @@ namespace jank::read::parse
       return error::parse_invalid_meta_hint_value({ start_token.start, latest_token.end });
     }
 
-    auto meta_result(visit_object(
-      [&](auto const typed_val) -> processor::object_result {
-        using T = typename decltype(typed_val)::value_type;
-        if constexpr(std::same_as<T, obj::keyword>)
+    auto meta_result(
+      [&](auto const val) -> processor::object_result {
+        if (is_keyword(val))
         {
           return object_source_info{
-            obj::persistent_array_map::create_unique(typed_val, obj::boolean::true_const()),
+            obj::persistent_array_map::create_unique(val, obj::boolean::true_const()),
             start_token,
             latest_token
           };
         }
-        if constexpr(behavior::map_like<T>)
+        auto const bs(object_behaviors(val));
+        if (bs.is_map)
         {
-          return object_source_info{ typed_val, start_token, latest_token };
+          return object_source_info{ val, start_token, latest_token };
         }
         else
         {
           return error::parse_invalid_meta_hint_value({ start_token.start, latest_token.end });
         }
-      },
-      meta_val_result.expect_ok().unwrap().ptr));
+      }(meta_val_result.expect_ok().unwrap().ptr));
     if(meta_result.is_err())
     {
       return meta_result;

@@ -56,19 +56,20 @@
 #include <jank/runtime/behavior/associatively_readable.hpp>
 #include <jank/runtime/behavior/associatively_writable.hpp>
 #include <jank/runtime/behavior/callable.hpp>
+#include <jank/runtime/behavior/chunkable.hpp>
+#include <jank/runtime/behavior/collection_like.hpp>
 #include <jank/runtime/behavior/conjable.hpp>
 #include <jank/runtime/behavior/countable.hpp>
 #include <jank/runtime/behavior/derefable.hpp>
-#include <jank/runtime/behavior/seqable.hpp>
-#include <jank/runtime/behavior/set_like.hpp>
-#include <jank/runtime/behavior/sequential.hpp>
-#include <jank/runtime/behavior/collection_like.hpp>
-#include <jank/runtime/behavior/transientable.hpp>
 #include <jank/runtime/behavior/indexable.hpp>
-#include <jank/runtime/behavior/stackable.hpp>
-#include <jank/runtime/behavior/chunkable.hpp>
+#include <jank/runtime/behavior/map_like.hpp>
 #include <jank/runtime/behavior/metadatable.hpp>
 #include <jank/runtime/behavior/nameable.hpp>
+#include <jank/runtime/behavior/seqable.hpp>
+#include <jank/runtime/behavior/sequential.hpp>
+#include <jank/runtime/behavior/set_like.hpp>
+#include <jank/runtime/behavior/stackable.hpp>
+#include <jank/runtime/behavior/transientable.hpp>
 
 namespace jank::runtime
 {
@@ -768,6 +769,11 @@ namespace jank::runtime
         this->is_transientable = true;
         this->to_transient = [](object_ptr const o) { return try_object<T>(o)->to_transient(); };
       }
+      if constexpr(behavior::persistentable<T>)
+      {
+        this->is_persistentable = true;
+        this->to_persistent = [](object_ptr const o) { return try_object<T>(o)->to_persistent(); };
+      }
       if constexpr(behavior::chunk_like<T>)
       {
         this->is_chunk_like = true;
@@ -844,30 +850,39 @@ namespace jank::runtime
         this->is_derefable = true;
         this->deref = [](object_ptr const o) { return try_object<T>(o)->deref(); };
       }
+      if constexpr(behavior::map_like<T>)
+      {
+        this->is_map = true;
+      }
+      if constexpr(behavior::set_like<T>)
+      {
+        this->is_set = true;
+      }
     }
 
-    //native_bool is_empty{};
-    native_bool is_object_like{};
-    native_bool is_sequenceable{};
-    native_bool is_sequential{};
-    native_bool is_seqable{};
-    native_bool is_collection{};
     //native_bool is_list{};
-    native_bool is_vector{};
-    native_bool is_map{};
-    native_bool is_associative{};
-    native_bool is_set{};
-    native_bool is_counter{};
-    native_bool is_transientable{};
     //native_bool is_sorted{};
+    native_bool is_associative{};
+    native_bool is_callable{};
     native_bool is_chunk_like{};
     native_bool is_chunkable{};
-    native_bool is_metadatable{};
-    native_bool is_function_like{};
-    native_bool is_named{};
+    native_bool is_conjable_in_place{};
+    native_bool is_collection{};
+    native_bool is_counter{};
     native_bool is_derefable{};
-    native_bool is_callable{};
+    native_bool is_function_like{};
+    native_bool is_map{};
+    native_bool is_metadatable{};
+    native_bool is_named{};
+    native_bool is_object_like{}; //redundant?
+    native_bool is_seqable{};
     native_bool is_sequenceable_in_place{};
+    native_bool is_sequenceable{};
+    native_bool is_sequential{};
+    native_bool is_set{};
+    native_bool is_transientable{};
+    native_bool is_persistentable{};
+    native_bool is_vector{};
 
     /* behavior::object_like */
     std::function<native_persistent_string(object_ptr const)> to_string{};
@@ -881,6 +896,9 @@ namespace jank::runtime
 
     /* behavior::sequenceable_in_place */
     std::function<object_ptr(object_ptr const)> next_in_place{};
+
+    /* behavior::conjable_in_place */
+    std::function<object_ptr(object_ptr const)> conj_in_place{};
 
     /* behavior::derefable */
     std::function<object_ptr(object_ptr const)> deref{};
@@ -901,16 +919,21 @@ namespace jank::runtime
     /* behavior::transientable */
     std::function<object_ptr(object_ptr const)> to_transient{};
 
+    /* behavior::persistentable */
+    std::function<object_ptr(object_ptr const)> to_persistent{};
+
     /* behavior::chunk_like */
     std::function<object_ptr(object_ptr const)> chunk_next{};
     std::function<object_ptr(object_ptr const)> chunk_next_in_place{};
+
+    /* behavior::conjable_in_place */
+    std::function<object_ptr(object_ptr const, object_ptr const)> conj_in_place{};
 
     /* behavior::chunkable */
     std::function<object_ptr(object_ptr const)> chunked_first{};
     std::function<object_ptr(object_ptr const)> chunked_next{};
 
     /* behavior::function_like */
-    //TODO overload one function?
     std::function<object_ptr(object_ptr const)> call0{};
     std::function<object_ptr(object_ptr const, object_ptr const)> call1{};
     std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const)> call2{};
