@@ -766,6 +766,13 @@ namespace jank::runtime
         this->chunked_first = [](object_ptr const o) { return expect_object<T>(o)->chunked_first(); };
         this->chunked_next = [](object_ptr const o) { return expect_object<T>(o)->chunked_next(); };
       }
+      if constexpr(behavior::metadatable<T>)
+      {
+        this->is_metadatable = true;
+        this->set_meta = [](object_ptr const o, object_ptr const meta_obj) {
+          expect_object<T>(o)->meta = behavior::detail::validate_meta(meta_obj);
+        };
+      }
     }
 
     //native_bool is_empty{};
@@ -784,9 +791,13 @@ namespace jank::runtime
     //native_bool is_sorted{};
     native_bool is_chunk_like{};
     native_bool is_chunkable{};
+    native_bool is_metadatable{};
 
     /* behavior::object_like */
     std::function<native_persistent_string(object_ptr const)> to_string{};
+
+    /* behavior::metadatable */
+    std::function<void(object_ptr const, object_ptr const meta_obj)> set_meta{};
     
     /* behavior::transientable */
     std::function<object_ptr(object_ptr const)> to_transient{};

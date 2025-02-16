@@ -821,16 +821,11 @@ extern "C"
   {
     auto const o_obj(reinterpret_cast<object *>(o));
     auto const meta_obj(reinterpret_cast<object *>(meta));
-    runtime::visit_object(
-      [&](auto const typed_o) {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::metadatable<T>)
-        {
-          typed_o->meta = behavior::detail::validate_meta(meta_obj);
-        }
-      },
-      o_obj);
+    auto const bs(object_behaviors(o_obj));
+    if (bs.is_metadatable)
+    {
+      bs.set_meta(o_obj, meta_obj);
+    };
   }
 
   void jank_throw(jank_object_ptr const o)
