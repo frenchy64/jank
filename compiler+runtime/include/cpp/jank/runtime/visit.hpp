@@ -58,6 +58,7 @@
 #include <jank/runtime/behavior/callable.hpp>
 #include <jank/runtime/behavior/conjable.hpp>
 #include <jank/runtime/behavior/countable.hpp>
+#include <jank/runtime/behavior/derefable.hpp>
 #include <jank/runtime/behavior/seqable.hpp>
 #include <jank/runtime/behavior/set_like.hpp>
 #include <jank/runtime/behavior/sequential.hpp>
@@ -805,6 +806,13 @@ namespace jank::runtime
       if constexpr(behavior::nameable<T>)
       {
         this->is_named = true;
+        this->get_name = [](object_ptr const o) { return expect_object<T>(o)->get_name(); };
+        this->get_namespace = [](object_ptr const o) { return expect_object<T>(o)->get_namespace(); };
+      }
+      if constexpr(behavior::derefable<T>)
+      {
+        this->is_derefable = true;
+        this->deref = [](object_ptr const o) { return expect_object<T>(o)->deref(); };
       }
     }
 
@@ -827,6 +835,7 @@ namespace jank::runtime
     native_bool is_metadatable{};
     native_bool is_function_like{};
     native_bool is_named{};
+    native_bool is_derefable{};
 
     //template<typename U>
     //std::function<bool(std::is_class_v<U> const c)> is_base_of_v{};
@@ -835,6 +844,13 @@ namespace jank::runtime
     std::function<native_persistent_string(object_ptr const)> to_string{};
     std::function<native_hash(object_ptr const)> to_hash{};
     std::function<native_bool(object_ptr const, object_ptr const)> equal{};
+
+    /* behavior::derefable */
+    std::function<object_ptr(object_ptr const)> deref{};
+
+    /* behavior::nameable */
+    std::function<native_persistent_string(object_ptr const)> get_name{};
+    std::function<native_persistent_string(object_ptr const)> get_namespace{};
 
     /* behavior::seqable */
     std::function<object_ptr(object_ptr const)> seq{};

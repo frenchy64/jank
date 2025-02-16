@@ -392,21 +392,16 @@ namespace jank::runtime
 
   object_ptr namespace_(object_ptr const o)
   {
-    return visit_object(
-      [](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::nameable<T>)
-        {
-          auto const ns(typed_o->get_namespace());
-          return (ns.empty() ? obj::nil::nil_const() : make_box<obj::persistent_string>(ns));
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not nameable: {}", typed_o->to_string()) };
-        }
-      },
-      o);
+    auto const bs(object_behaviors(o));
+    if (bs.is_named)
+    {
+      auto const ns(bs.get_namespace(o));
+      return (ns.empty() ? obj::nil::nil_const() : make_box<obj::persistent_string>(ns));
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not nameable: {}", bs.to_string(o)) };
+    }
   }
 
   object_ptr keyword(object_ptr const ns, object_ptr const name)
@@ -533,20 +528,15 @@ namespace jank::runtime
 
   object_ptr deref(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::derefable<T>)
-        {
-          return typed_o->deref();
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not derefable: {}", typed_o->to_string()) };
-        }
-      },
-      o);
+    auto const bs(object_behaviors(o));
+    if(bs.is_derefable)
+    {
+      return bs.deref(o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not derefable: {}", bs.to_string(o)) };
+    }
   }
 
   object_ptr volatile_(object_ptr const o)
