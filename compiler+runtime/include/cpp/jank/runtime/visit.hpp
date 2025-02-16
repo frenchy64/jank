@@ -723,6 +723,7 @@ namespace jank::runtime
     behaviors() = default;
 
     //native_bool is_empty{};
+    native_bool is_object_like{};
     native_bool is_seq{};
     native_bool is_sequential{};
     native_bool is_seqable{};
@@ -735,8 +736,22 @@ namespace jank::runtime
     native_bool is_counter{};
     native_bool is_transientable{};
     //native_bool is_sorted{};
+    native_bool is_chunk_like{};
+    native_bool is_chunkable{};
+
+    /* behavior::object_like */
+    std::function<native_persistent_string(object_ptr const)> to_string{};
     
+    /* behavior::transientable */
     std::function<object_ptr(object_ptr const)> to_transient{};
+
+    /* behavior::chunk_like */
+    std::function<object_ptr(object_ptr const)> chunk_next{};
+    std::function<object_ptr(object_ptr const)> chunk_next_in_place{};
+
+    /* behavior::chunkable */
+    std::function<object_ptr(object_ptr const)> chunked_first{};
+    std::function<object_ptr(object_ptr const)> chunked_next{};
   };
 
   template <typename T>
@@ -745,35 +760,50 @@ namespace jank::runtime
   {
     behaviors const * const bs_erased{};
     auto * const bs(const_cast<behaviors *>(bs_erased));
-        if constexpr(behavior::seqable<T>)
-        {
-          bs->is_seqable = true;
-        }
-        if constexpr(behavior::sequenceable<T>)
-        {
-          bs->is_seq = true;
-        }
-        if constexpr(behavior::collection_like<T>)
-        {
-          bs->is_collection = true;
-        }
-        if constexpr(behavior::associatively_readable<T> && behavior::associatively_writable<T>)
-        {
-          bs->is_associative = true;
-        }
-        if constexpr(behavior::countable<T>)
-        {
-          bs->is_counter = true;
-        }
-        if constexpr(behavior::transientable<T>)
-        {
-          bs->is_transientable = true;
-          bs->to_transient = [](object_ptr const o) {
-            return expect_object<T>(o)->to_transient();
-          };
-        }
+    if constexpr(behavior::object_like<T>)
+    {
+      bs->is_object_like = true;
+      bs->to_string = [](object_ptr const o) { return expect_object<T>(o)->to_string(); };
+    }
+    if constexpr(behavior::seqable<T>)
+    {
+      bs->is_seqable = true;
+    }
+    if constexpr(behavior::sequenceable<T>)
+    {
+      bs->is_seq = true;
+    }
+    if constexpr(behavior::collection_like<T>)
+    {
+      bs->is_collection = true;
+    }
+    if constexpr(behavior::associatively_readable<T> && behavior::associatively_writable<T>)
+    {
+      bs->is_associative = true;
+    }
+    if constexpr(behavior::countable<T>)
+    {
+      bs->is_counter = true;
+    }
+    if constexpr(behavior::transientable<T>)
+    {
+      bs->is_transientable = true;
+      bs->to_transient = [](object_ptr const o) { return expect_object<T>(o)->to_transient(); };
+    }
+    if constexpr(behavior::chunk_like<T>)
+    {
+      bs->is_chunk_like = true;
+      bs->chunk_next = [](object_ptr const o) { return expect_object<T>(o)->chunk_next(); };
+      bs->chunk_next_in_place = [](object_ptr const o) { return expect_object<T>(o)->chunk_next_in_place(); };
+    }
+    if constexpr(behavior::chunkable<T>)
+    {
+      bs->is_chunkable = true;
+      bs->chunked_first = [](object_ptr const o) { return expect_object<T>(o)->chunked_first(); };
+      bs->chunked_next = [](object_ptr const o) { return expect_object<T>(o)->chunked_next(); };
+    }
 
-        return bs;
+    return bs;
   }
 
   behaviors* object_behaviors(object_ptr type);

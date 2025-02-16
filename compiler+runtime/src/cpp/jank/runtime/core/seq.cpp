@@ -924,6 +924,17 @@ namespace jank::runtime
         return obj::persistent_list::create(typed_s);
       },
       s);
+    /*
+    auto const bs(object_behaviors(s));
+    if(bs->is_seqable)
+    {
+      return obj::persistent_list::create(s);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs->to_string(s)) };
+    }
+    */
   }
 
   obj::persistent_vector_ptr vec(object_ptr const s)
@@ -933,6 +944,17 @@ namespace jank::runtime
         return obj::persistent_vector::create(typed_s);
       },
       s);
+    /*
+    auto const bs(object_behaviors(s));
+    if(bs->is_seqable)
+    {
+      return obj::persistent_vector::create(s);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs->to_string(s)) };
+    }
+    */
   }
 
   size_t sequence_length(object_ptr const s)
@@ -1083,6 +1105,18 @@ namespace jank::runtime
         }
       },
       o);
+    /*
+    auto const bs(object_behaviors(o));
+    if (bs->is_chunkable)
+    {
+      assert(bs->chunked_first);
+      return bs->chunked_first(o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not chunkable: {}", bs->to_string(o)) };
+    }
+    */
   }
 
   object_ptr chunk_next(object_ptr const o)
@@ -1100,6 +1134,18 @@ namespace jank::runtime
         }
       },
       o);
+    /*
+    auto const bs(object_behaviors(o));
+    if (bs->is_chunkable)
+    {
+      assert(bs->chunked_first);
+      return bs->chunked_first(o) ?: obj::nil::nil_const();
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not chunkable: {}", bs->to_string(o)) };
+    }
+    */
   }
 
   object_ptr chunk_rest(object_ptr const o)
@@ -1117,6 +1163,18 @@ namespace jank::runtime
         }
       },
       o);
+    /*
+    auto const bs(object_behaviors(o));
+    if (bs->is_chunkable)
+    {
+      assert(bs->chunked_next);
+      return bs->chunked_next(o) ?: obj::persistent_list::empty();
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not chunkable: {}", bs->to_string(o)) };
+    }
+    */
   }
 
   object_ptr chunk_cons(object_ptr const chunk, object_ptr const rest)
@@ -1126,6 +1184,10 @@ namespace jank::runtime
 
   native_bool is_chunked_seq(object_ptr const o)
   {
+    //fmt::println("bool {} {}", runtime::to_string(o), object_type_str(o->type));
+    //object_behaviors(o);  //TODO segfault
+    //assert(bs);
+    //throw std::runtime_error{ fmt::format("bool {}", bs->is_chunkable) };
     return visit_object(
       [=](auto const typed_o) -> native_bool {
         using T = typename decltype(typed_o)::value_type;
