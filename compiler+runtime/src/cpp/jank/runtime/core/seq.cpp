@@ -1092,89 +1092,41 @@ namespace jank::runtime
 
   object_ptr chunk_first(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::chunkable<T>)
-        {
-          return typed_o->chunked_first();
-        }
-        {
-          throw std::runtime_error{ fmt::format("not chunkable: {}", typed_o->to_string()) };
-        }
-      },
-      o);
-    /*
     auto const bs(object_behaviors(o));
     if (bs.is_chunkable)
     {
-      assert(bs.chunked_first);
       return bs.chunked_first(o);
     }
     else
     {
       throw std::runtime_error{ fmt::format("not chunkable: {}", bs.to_string(o)) };
     }
-    */
   }
 
   object_ptr chunk_next(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::chunkable<T>)
-        {
-          return typed_o->chunked_next() ?: obj::nil::nil_const();
-        }
-        {
-          throw std::runtime_error{ fmt::format("not chunkable: {}", typed_o->to_string()) };
-        }
-      },
-      o);
-    /*
     auto const bs(object_behaviors(o));
     if (bs.is_chunkable)
     {
-      assert(bs.chunked_first);
-      return bs.chunked_first(o) ?: obj::nil::nil_const();
+      return bs.chunked_next(o) ?: obj::nil::nil_const();
     }
     else
     {
       throw std::runtime_error{ fmt::format("not chunkable: {}", bs.to_string(o)) };
     }
-    */
   }
 
   object_ptr chunk_rest(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::chunkable<T>)
-        {
-          return typed_o->chunked_next() ?: obj::persistent_list::empty();
-        }
-        {
-          throw std::runtime_error{ fmt::format("not chunkable: {}", typed_o->to_string()) };
-        }
-      },
-      o);
-    /*
     auto const bs(object_behaviors(o));
     if (bs.is_chunkable)
     {
-      assert(bs.chunked_next);
       return bs.chunked_next(o) ?: obj::persistent_list::empty();
     }
     else
     {
       throw std::runtime_error{ fmt::format("not chunkable: {}", bs.to_string(o)) };
     }
-    */
   }
 
   object_ptr chunk_cons(object_ptr const chunk, object_ptr const rest)
