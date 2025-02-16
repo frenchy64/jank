@@ -29,33 +29,28 @@ namespace clojure::core_native
 
   static object_ptr to_unqualified_symbol(object_ptr const o)
   {
-    return runtime::visit_object(
-      [&](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(std::same_as<T, obj::symbol>)
-        {
-          return typed_o;
-        }
-        else if constexpr(std::same_as<T, obj::persistent_string>)
-        {
-          return make_box<obj::symbol>(typed_o->data);
-        }
-        else if constexpr(std::same_as<T, var>)
-        {
-          return make_box<obj::symbol>(typed_o->n->name->name, typed_o->name->name);
-        }
-        else if constexpr(std::same_as<T, obj::keyword>)
-        {
-          return typed_o->sym;
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("can't convert {} to a symbol",
-                                                typed_o->to_code_string()) };
-        }
-      },
-      o);
+    if(is_symbol(o))
+    {
+      return o;
+    }
+    else if(is_string(o))
+    {
+      return make_box<obj::symbol>(expect_object<obj::persistent_string>(o)->data);
+    }
+    else if(is_var(o))
+    {
+      auto const v(expect_object<var>(o));
+      return make_box<obj::symbol>(v->n->name->name, v->name->name);
+    }
+    else if(is_keyword(o))
+    {
+      return expect_object<obj::keyword>(o)->sym;
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("can't convert {} to a symbol",
+                                            runtime::to_code_string(o)) };
+    }
   }
 
   static object_ptr to_qualified_symbol(object_ptr const ns, object_ptr const name)
@@ -66,11 +61,6 @@ namespace clojure::core_native
   static object_ptr lazy_seq(object_ptr const o)
   {
     return make_box<obj::lazy_sequence>(o);
-  }
-
-  static object_ptr is_var(object_ptr const o)
-  {
-    return make_box(o->type == object_type::var);
   }
 
   static object_ptr var_get(object_ptr const o)
@@ -446,7 +436,7 @@ jank_object_ptr jank_load_clojure_core_native()
   intern_fn("named?", &is_named);
   intern_fn("name", &name);
   intern_fn("namespace", &namespace_);
-  intern_fn("var?", &core_native::is_var);
+  intern_fn("var?", &is_var);
   intern_fn("var-get", &core_native::var_get);
   intern_fn("intern-var", &core_native::intern_var);
   intern_fn("var-get-root", &core_native::var_get_root);

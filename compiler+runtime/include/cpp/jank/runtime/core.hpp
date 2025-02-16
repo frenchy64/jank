@@ -50,6 +50,7 @@ namespace jank::runtime
   native_bool is_qualified_keyword(object_ptr o);
 
   native_bool is_callable(object_ptr o);
+  native_bool is_var(object_ptr o);
 
   native_hash to_hash(object_ptr o);
 
