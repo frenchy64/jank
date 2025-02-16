@@ -728,6 +728,7 @@ namespace jank::runtime
       {
         this->is_object_like = true;
         this->to_string = [](object_ptr const o) { return expect_object<T>(o)->to_string(); };
+        this->to_hash = [](object_ptr const o) { return expect_object<T>(o)->to_hash(); };
       }
       if constexpr(behavior::seqable<T>)
       {
@@ -773,6 +774,20 @@ namespace jank::runtime
           expect_object<T>(o)->meta = behavior::detail::validate_meta(meta_obj);
         };
       }
+      if constexpr(behavior::function_like<T>)
+      {
+        this->call0 = [](object_ptr const o) { return expect_object<T>(o)->call(); };
+        this->call1 = [](object_ptr const o, object_ptr const a0) { return expect_object<T>(o)->call(a0); };
+        this->call2 = [](object_ptr const o, object_ptr const a0, object_ptr const a1) { return expect_object<T>(o)->call(a0, a1); };
+        this->call3 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2) { return expect_object<T>(o)->call(a0, a1, a2); };
+        this->call4 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3) { return expect_object<T>(o)->call(a0, a1, a2, a3); };
+        this->call5 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4) { return expect_object<T>(o)->call(a0, a1, a2, a3, a4); };
+        this->call6 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5) { return expect_object<T>(o)->call(a0, a1, a2, a3, a4, a5); };
+        this->call7 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6) { return expect_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6); };
+        this->call8 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6, object_ptr const a7) { return expect_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7); };
+        this->call9 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6, object_ptr const a7, object_ptr const a8) { return expect_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7, a8); };
+        this->get_arity_flags = [](object_ptr const o) { return expect_object<T>(o)->get_arity_flags(); };
+      }
     }
 
     //native_bool is_empty{};
@@ -792,9 +807,11 @@ namespace jank::runtime
     native_bool is_chunk_like{};
     native_bool is_chunkable{};
     native_bool is_metadatable{};
+    native_bool is_function_like{};
 
     /* behavior::object_like */
     std::function<native_persistent_string(object_ptr const)> to_string{};
+    std::function<native_hash(object_ptr const)> to_hash{};
 
     /* behavior::metadatable */
     std::function<void(object_ptr const, object_ptr const meta_obj)> set_meta{};
@@ -809,6 +826,20 @@ namespace jank::runtime
     /* behavior::chunkable */
     std::function<object_ptr(object_ptr const)> chunked_first{};
     std::function<object_ptr(object_ptr const)> chunked_next{};
+
+    /* behavior::function_like */
+    //TODO overload one function?
+    std::function<object_ptr(object_ptr const)> call0{};
+    std::function<object_ptr(object_ptr const, object_ptr const)> call1{};
+    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const)> call2{};
+    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call3{};
+    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call4{};
+    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call5{};
+    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call6{};
+    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call7{};
+    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call8{};
+    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call9{};
+    std::function<size_t(object_ptr const)> get_arity_flags{};
 
     object_ptr to_runtime_data() const
     {
