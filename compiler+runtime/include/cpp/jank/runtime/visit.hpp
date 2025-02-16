@@ -800,6 +800,7 @@ namespace jank::runtime
       if constexpr(behavior::function_like<T>)
       {
         this->is_function_like = true;
+        //TODO start arguments from 1 instead of 0
         this->call0 = [](object_ptr const o) { return expect_object<T>(o)->call(); };
         this->call1 = [](object_ptr const o, object_ptr const a0) { return expect_object<T>(o)->call(a0); };
         this->call2 = [](object_ptr const o, object_ptr const a0, object_ptr const a1) { return expect_object<T>(o)->call(a0, a1); };
@@ -810,6 +811,7 @@ namespace jank::runtime
         this->call7 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6) { return expect_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6); };
         this->call8 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6, object_ptr const a7) { return expect_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7); };
         this->call9 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6, object_ptr const a7, object_ptr const a8) { return expect_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7, a8); };
+        this->call10 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6, object_ptr const a7, object_ptr const a8, object_ptr const a9) { return expect_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9); };
         this->get_arity_flags = [](object_ptr const o) { return expect_object<T>(o)->get_arity_flags(); };
       }
       //TODO test for call1 arity
@@ -917,6 +919,7 @@ namespace jank::runtime
     std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call7{};
     std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call8{};
     std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call9{};
+    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call10{};
     std::function<size_t(object_ptr const)> get_arity_flags{};
 
     object_ptr to_runtime_data() const
