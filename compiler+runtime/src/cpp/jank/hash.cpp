@@ -155,7 +155,7 @@ namespace jank::hash
   uint32_t visit(runtime::object const * const o)
   {
     assert(o);
-    return runtime::visit_object([](auto const typed_o) { return typed_o->to_hash(); }, o);
+    return object_behaviors(o).to_hash(o);
   }
 
   uint32_t ordered(runtime::object const * const sequence)
