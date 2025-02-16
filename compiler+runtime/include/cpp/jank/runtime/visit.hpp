@@ -67,6 +67,7 @@
 #include <jank/runtime/behavior/stackable.hpp>
 #include <jank/runtime/behavior/chunkable.hpp>
 #include <jank/runtime/behavior/metadatable.hpp>
+#include <jank/runtime/behavior/nameable.hpp>
 
 namespace jank::runtime
 {
@@ -773,12 +774,20 @@ namespace jank::runtime
       if constexpr(behavior::metadatable<T>)
       {
         this->is_metadatable = true;
+        this->with_meta = [](object_ptr const o, object_ptr const m) {
+          return expect_object<T>(o)->with_meta(m);
+        };
+        this->get_meta = [](object_ptr const o) {
+          return expect_object<T>(o)->meta.unwrap_or(obj::nil::nil_const());
+        };
         this->set_meta = [](object_ptr const o, object_ptr const meta_obj) {
           expect_object<T>(o)->meta = behavior::detail::validate_meta(meta_obj);
+          return meta_obj;
         };
       }
       if constexpr(behavior::function_like<T>)
       {
+        this->is_function_like = true;
         this->call0 = [](object_ptr const o) { return expect_object<T>(o)->call(); };
         this->call1 = [](object_ptr const o, object_ptr const a0) { return expect_object<T>(o)->call(a0); };
         this->call2 = [](object_ptr const o, object_ptr const a0, object_ptr const a1) { return expect_object<T>(o)->call(a0, a1); };
@@ -790,6 +799,10 @@ namespace jank::runtime
         this->call8 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6, object_ptr const a7) { return expect_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7); };
         this->call9 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6, object_ptr const a7, object_ptr const a8) { return expect_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7, a8); };
         this->get_arity_flags = [](object_ptr const o) { return expect_object<T>(o)->get_arity_flags(); };
+      }
+      if constexpr(behavior::nameable<T>)
+      {
+        this->is_named = true;
       }
     }
 
@@ -811,6 +824,7 @@ namespace jank::runtime
     native_bool is_chunkable{};
     native_bool is_metadatable{};
     native_bool is_function_like{};
+    native_bool is_named{};
 
     //template<typename U>
     //std::function<bool(std::is_class_v<U> const c)> is_base_of_v{};
@@ -821,7 +835,9 @@ namespace jank::runtime
     std::function<native_bool(object_ptr const, object_ptr const)> equal{};
 
     /* behavior::metadatable */
-    std::function<void(object_ptr const, object_ptr const meta_obj)> set_meta{};
+    std::function<object_ptr(object_ptr const, object_ptr const)> with_meta{};
+    std::function<object_ptr(object_ptr const)> get_meta{};
+    std::function<object_ptr(object_ptr const, object_ptr const meta_obj)> set_meta{};
     
     /* behavior::transientable */
     std::function<object_ptr(object_ptr const)> to_transient{};

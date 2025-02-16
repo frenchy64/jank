@@ -278,46 +278,43 @@ namespace jank::runtime
         }
       },
       m);
+    /*
+    auto const bs(object_behaviors(m));
+    if (bs.is_metadatable)
+    {
+      return bs.get_meta(m);
+    }
+    else
+    {
+      return obj::nil::nil_const();
+    }
+    */
   }
 
   object_ptr with_meta(object_ptr const o, object_ptr const m)
   {
-    return visit_object(
-      [](auto const typed_o, object_ptr const m) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::metadatable<T>)
-        {
-          return typed_o->with_meta(m);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not metadatable: {}", to_string(m)) };
-        }
-      },
-      o,
-      m);
+    auto const bs(object_behaviors(o));
+    if (bs.is_metadatable)
+    {
+      return bs.with_meta(o, m);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not metadatable: {}", bs.to_string(o)) };
+    }
   }
 
   object_ptr reset_meta(object_ptr const o, object_ptr const m)
   {
-    return visit_object(
-      [](auto const typed_o, object_ptr const m) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::metadatable<T>)
-        {
-          auto const meta(behavior::detail::validate_meta(m));
-          typed_o->meta = meta;
-          return m;
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not metadatable: {}", to_string(m)) };
-        }
-      },
-      o,
-      m);
+    auto const bs(object_behaviors(o));
+    if (bs.is_metadatable)
+    {
+      return bs.set_meta(o, m);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not metadatable: {}", bs.to_string(o)) };
+    }
   }
 
   obj::persistent_string_ptr subs(object_ptr const s, object_ptr const start)
