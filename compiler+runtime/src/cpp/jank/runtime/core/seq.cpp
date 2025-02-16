@@ -62,31 +62,17 @@ namespace jank::runtime
 
   native_bool is_seqable(object_ptr const o)
   {
-    return visit_seqable([=](auto const) -> native_bool { return true; },
-                         [=]() -> native_bool { return false; },
-                         o);
+    return object_behaviors(o).is_seqable;
   }
 
   native_bool is_sequential(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> native_bool {
-        using T = typename decltype(typed_o)::value_type;
-
-        return behavior::sequential<T>;
-      },
-      o);
+    return object_behaviors(o).is_sequential;
   }
 
   native_bool is_collection(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> native_bool {
-        using T = typename decltype(typed_o)::value_type;
-
-        return behavior::collection_like<T>;
-      },
-      o);
+    return object_behaviors(o).is_collection;
   }
 
   native_bool is_list(object_ptr const o)
@@ -110,13 +96,7 @@ namespace jank::runtime
 
   native_bool is_associative(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> native_bool {
-        using T = typename decltype(typed_o)::value_type;
-
-        return (behavior::associatively_readable<T> && behavior::associatively_writable<T>);
-      },
-      o);
+    return object_behaviors(o).is_associative;
   }
 
   native_bool is_set(object_ptr const o)
