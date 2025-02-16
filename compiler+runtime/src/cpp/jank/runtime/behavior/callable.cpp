@@ -642,154 +642,149 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
-
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-          switch(mask)
+    auto const bs(object_behaviors(source));
+    if(bs.is_function_like || bs.is_callable)
+    {
+      auto const arity_flags(bs.get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
+      switch(mask)
+      {
+        /* TODO: Optimize this with a faster seq? */
+        case callable::mask_variadic_arity(0):
           {
-            /* TODO: Optimize this with a faster seq? */
-            case callable::mask_variadic_arity(0):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(10 + rest->count());
-                packed.insert(packed.end(), { a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(1):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(9 + rest->count());
-                packed.insert(packed.end(), { a2, a3, a4, a5, a6, a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(2):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(8 + rest->count());
-                packed.insert(packed.end(), { a3, a4, a5, a6, a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(3):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(7 + rest->count());
-                packed.insert(packed.end(), { a4, a5, a6, a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(4):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(6 + rest->count());
-                packed.insert(packed.end(), { a5, a6, a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(5):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(5 + rest->count());
-                packed.insert(packed.end(), { a6, a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          a5,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(6):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(4 + rest->count());
-                packed.insert(packed.end(), { a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          a5,
-                                          a6,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(7):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(3 + rest->count());
-                packed.insert(packed.end(), { a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          a5,
-                                          a6,
-                                          a7,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(8):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(2 + rest->count());
-                packed.insert(packed.end(), { a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          a5,
-                                          a6,
-                                          a7,
-                                          a8,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(9):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(1 + rest->count());
-                packed.insert(packed.end(), { a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          a5,
-                                          a6,
-                                          a7,
-                                          a8,
-                                          a9,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            default:
-              throw std::runtime_error{ fmt::format("unsupported arity: {}", 10 + rest->count()) };
+            native_vector<object_ptr> packed;
+            packed.reserve(10 + rest->count());
+            packed.insert(packed.end(), { a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs.call1(source, make_box<obj::native_vector_sequence>(std::move(packed)));
           }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with {} args to: {}",
-                                                10 + sequence_length(rest),
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        case callable::mask_variadic_arity(1):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(9 + rest->count());
+            packed.insert(packed.end(), { a2, a3, a4, a5, a6, a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs.call2(source, a1,
+                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(2):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(8 + rest->count());
+            packed.insert(packed.end(), { a3, a4, a5, a6, a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs.call3(source, a1,
+                                      a2,
+                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(3):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(7 + rest->count());
+            packed.insert(packed.end(), { a4, a5, a6, a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs.call4(source, a1,
+                                      a2,
+                                      a3,
+                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(4):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(6 + rest->count());
+            packed.insert(packed.end(), { a5, a6, a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs.call5(source, a1,
+                                      a2,
+                                      a3,
+                                      a4,
+                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(5):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(5 + rest->count());
+            packed.insert(packed.end(), { a6, a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs.call6(source, a1,
+                                      a2,
+                                      a3,
+                                      a4,
+                                      a5,
+                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(6):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(4 + rest->count());
+            packed.insert(packed.end(), { a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs.call7(source, a1,
+                                      a2,
+                                      a3,
+                                      a4,
+                                      a5,
+                                      a6,
+                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(7):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(3 + rest->count());
+            packed.insert(packed.end(), { a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs.call8(source, a1,
+                                      a2,
+                                      a3,
+                                      a4,
+                                      a5,
+                                      a6,
+                                      a7,
+                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(8):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(2 + rest->count());
+            packed.insert(packed.end(), { a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs.call9(source, a1,
+                                      a2,
+                                      a3,
+                                      a4,
+                                      a5,
+                                      a6,
+                                      a7,
+                                      a8,
+                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(9):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(1 + rest->count());
+            packed.insert(packed.end(), { a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs.call10(source, a1,
+                                      a2,
+                                      a3,
+                                      a4,
+                                      a5,
+                                      a6,
+                                      a7,
+                                      a8,
+                                      a9,
+                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        default:
+          throw std::runtime_error{ fmt::format("unsupported arity: {}", 10 + rest->count()) };
+      }
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with {} args to: {}",
+                                            10 + sequence_length(rest),
+                                            bs.to_string(source)) };
+    }
   }
 
   object_ptr apply_to(object_ptr const source, object_ptr const args)
