@@ -53,6 +53,20 @@
 #include <jank/runtime/var.hpp>
 #include <jank/runtime/rtti.hpp>
 #include <jank/runtime/core/to_string.hpp>
+#include <jank/runtime/behavior/associatively_readable.hpp>
+#include <jank/runtime/behavior/associatively_writable.hpp>
+#include <jank/runtime/behavior/callable.hpp>
+#include <jank/runtime/behavior/conjable.hpp>
+#include <jank/runtime/behavior/countable.hpp>
+#include <jank/runtime/behavior/seqable.hpp>
+#include <jank/runtime/behavior/set_like.hpp>
+#include <jank/runtime/behavior/sequential.hpp>
+#include <jank/runtime/behavior/collection_like.hpp>
+#include <jank/runtime/behavior/transientable.hpp>
+#include <jank/runtime/behavior/indexable.hpp>
+#include <jank/runtime/behavior/stackable.hpp>
+#include <jank/runtime/behavior/chunkable.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
 
 namespace jank::runtime
 {
@@ -725,5 +739,42 @@ namespace jank::runtime
     std::function<object_ptr(object_ptr const)> to_transient{};
   };
 
-  behaviors object_behaviors(object_ptr type);
+  template <typename T>
+  requires behavior::object_like<T>
+  constexpr auto specific_object_behaviors(native_box<T const> const)
+  {
+    behaviors const * const bs_erased{};
+    auto * const bs(const_cast<behaviors *>(bs_erased));
+        if constexpr(behavior::seqable<T>)
+        {
+          bs->is_seqable = true;
+        }
+        if constexpr(behavior::sequenceable<T>)
+        {
+          bs->is_seq = true;
+        }
+        if constexpr(behavior::collection_like<T>)
+        {
+          bs->is_collection = true;
+        }
+        if constexpr(behavior::associatively_readable<T> && behavior::associatively_writable<T>)
+        {
+          bs->is_associative = true;
+        }
+        if constexpr(behavior::countable<T>)
+        {
+          bs->is_counter = true;
+        }
+        if constexpr(behavior::transientable<T>)
+        {
+          bs->is_transientable = true;
+          bs->to_transient = [](object_ptr const o) {
+            return expect_object<T>(o)->to_transient();
+          };
+        }
+
+        return bs;
+  }
+
+  behaviors* object_behaviors(object_ptr type);
 }

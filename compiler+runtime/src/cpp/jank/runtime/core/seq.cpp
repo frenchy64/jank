@@ -62,17 +62,17 @@ namespace jank::runtime
 
   native_bool is_seqable(object_ptr const o)
   {
-    return object_behaviors(o).is_seqable;
+    return object_behaviors(o)->is_seqable;
   }
 
   native_bool is_sequential(object_ptr const o)
   {
-    return object_behaviors(o).is_sequential;
+    return object_behaviors(o)->is_sequential;
   }
 
   native_bool is_collection(object_ptr const o)
   {
-    return object_behaviors(o).is_collection;
+    return object_behaviors(o)->is_collection;
   }
 
   native_bool is_list(object_ptr const o)
@@ -96,7 +96,7 @@ namespace jank::runtime
 
   native_bool is_associative(object_ptr const o)
   {
-    return object_behaviors(o).is_associative;
+    return object_behaviors(o)->is_associative;
   }
 
   native_bool is_set(object_ptr const o)
@@ -107,12 +107,12 @@ namespace jank::runtime
 
   native_bool is_counter(object_ptr const o)
   {
-    return object_behaviors(o).is_counter;
+    return object_behaviors(o)->is_counter;
   }
 
   native_bool is_transientable(object_ptr const o)
   {
-    return object_behaviors(o).is_transientable;
+    return object_behaviors(o)->is_transientable;
   }
 
   native_bool is_sorted(object_ptr const o)
