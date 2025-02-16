@@ -704,24 +704,28 @@ namespace jank::runtime
       std::forward<Args>(args)...);
   }
 
+  template <typename T>
   struct behaviors
   {
-    behaviors() = default;
+    behaviors<T>() = default;
 
     //native_bool is_empty{};
     native_bool is_seq{};
     native_bool is_sequential{};
     native_bool is_seqable{};
     native_bool is_collection{};
-    native_bool is_list{};
+    //native_bool is_list{};
     native_bool is_vector{};
     native_bool is_map{};
     native_bool is_associative{};
     native_bool is_set{};
     native_bool is_counter{};
     native_bool is_transientable{};
-    native_bool is_sorted{};
+    //native_bool is_sorted{};
+    
+    std::function<object_ptr(native_box<T> const)> to_transient{};
   };
 
-  behaviors object_behaviors(object_ptr type);
+  template <typename T>
+  behaviors<T> object_behaviors(native_box<T> type);
 }

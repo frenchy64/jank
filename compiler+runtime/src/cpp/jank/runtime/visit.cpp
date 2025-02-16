@@ -17,40 +17,42 @@
 
 namespace jank::runtime
 {
-  behaviors object_behaviors(object_ptr type)
+  template <typename T>
+  behaviors<T> object_behaviors(native_box<T> type)
   {
     return visit_object(
-      [&](auto const typed_o) -> behaviors {
-        using T = typename decltype(typed_o)::value_type;
+      [&](auto const typed_o) -> behaviors<T> {
+        using S = typename decltype(typed_o)::value_type;
 
         // TODO: cache
-        behaviors bs{};
-        if constexpr(behavior::seqable<T>)
+        behaviors<S const> bs{};
+        if constexpr(behavior::seqable<S>)
         {
           bs.is_seqable = true;
         }
-        if constexpr(behavior::sequenceable<T>)
+        if constexpr(behavior::sequenceable<S>)
         {
           bs.is_seq = true;
         }
-        if constexpr(behavior::collection_like<T>)
+        if constexpr(behavior::collection_like<S>)
         {
           bs.is_collection = true;
         }
-        if constexpr(behavior::associatively_readable<T> && behavior::associatively_writable<T>)
+        if constexpr(behavior::associatively_readable<S> && behavior::associatively_writable<S>)
         {
           bs.is_associative = true;
         }
-        if constexpr(behavior::countable<T>)
+        if constexpr(behavior::countable<S>)
         {
           bs.is_counter = true;
         }
-        if constexpr(behavior::transientable<T>)
+        if constexpr(behavior::transientable<S>)
         {
           bs.is_transientable = true;
+          bs.to_transient = [](native_box<S const> const o) { o->to_transient(); };
         }
 
-        return bs;
+        return reinterpret_cast<native_box<T>>(bs);
       },
       type);
   }
