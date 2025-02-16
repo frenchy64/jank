@@ -155,55 +155,58 @@ namespace jank::hash
   uint32_t visit(runtime::object const * const o)
   {
     assert(o);
-    auto const bs(object_behaviors(o));
-    return bs.to_hash(o);
+    return runtime::visit_object([](auto const typed_o) { return typed_o->to_hash(); }, o);
   }
 
   uint32_t ordered(runtime::object const * const sequence)
   {
     assert(sequence);
-    auto const bs(object_behaviors(sequence));
-    if (bs.is_sequenceable)
-    {
-      uint32_t n{};
-      uint32_t hash{ 1 };
-      //TODO next_in_place, updating bs if changes?
-      for(auto it(bs.fresh_seq(sequence)); it != nullptr; it = runtime::next_in_place(it))
-      {
-        //TODO first, updating bs if changes?
-        hash = 31 * hash + visit(runtime::first(it));
-        ++n;
-      }
+    return runtime::visit_object(
+      [](auto const typed_sequence) -> uint32_t {
+        using T = typename decltype(typed_sequence)::value_type;
+        if constexpr(runtime::behavior::sequenceable<T>)
+        {
+          uint32_t n{};
+          uint32_t hash{ 1 };
+          for(auto it(fresh_seq(typed_sequence)); it != nullptr; it = next_in_place(it))
+          {
+            hash = 31 * hash + visit(it->first());
+            ++n;
+          }
 
-      return mix_collection_hash(hash, n);
-    }
-    else
-    {
-      return bs.to_hash(sequence);
-    }
+          return mix_collection_hash(hash, n);
+        }
+        else
+        {
+          return typed_sequence->to_hash();
+        }
+      },
+      sequence);
   }
 
   uint32_t unordered(runtime::object const * const sequence)
   {
     assert(sequence);
-    auto const bs(object_behaviors(sequence));
-    if (bs.is_sequenceable)
-    {
-      uint32_t n{};
-      uint32_t hash{ 1 };
-      //TODO next_in_place
-      for(auto it(bs.fresh_seq(sequence)); it != nullptr; it = runtime::next_in_place(it))
-      {
-        //TODO first
-        hash += visit(runtime::first(it));
-        ++n;
-      }
+    return runtime::visit_object(
+      [](auto const typed_sequence) -> uint32_t {
+        using T = typename decltype(typed_sequence)::value_type;
+        if constexpr(runtime::behavior::sequenceable<T>)
+        {
+          uint32_t n{};
+          uint32_t hash{ 1 };
+          for(auto it(fresh_seq(typed_sequence)); it != nullptr; it = next_in_place(it))
+          {
+            hash += visit(it->first());
+            ++n;
+          }
 
-      return mix_collection_hash(hash, n);
-    }
-    else
-    {
-      return bs.to_hash(sequence);
-    }
+          return mix_collection_hash(hash, n);
+        }
+        else
+        {
+          return typed_sequence->to_hash();
+        }
+      },
+      sequence);
   }
 }

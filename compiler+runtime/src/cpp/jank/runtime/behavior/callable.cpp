@@ -22,7 +22,8 @@ namespace jank::runtime
 
     if(bs.is_function_like || bs.is_callable)
     {
-      switch(bs.get_arity_flags(source))
+      auto const arity_flags(bs.get_arity_flags(source));
+      switch(arity_flags)
       {
         case callable::mask_variadic_arity(0):
           return bs.call1(source, obj::nil::nil_const());
@@ -44,44 +45,35 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(object_behaviors(source));
+    if(bs.is_function_like || bs.is_callable)
+    {
+      auto const arity_flags(bs.get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-
-          switch(mask)
+      switch(mask)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs.call1(source, make_box<obj::native_array_sequence>(a1));
+        case callable::mask_variadic_arity(1):
+          if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(make_box<obj::native_array_sequence>(a1));
-            case callable::mask_variadic_arity(1):
-              if(!callable::is_variadic_ambiguous(arity_flags))
-              {
-                return typed_source->call(a1, obj::nil::nil_const());
-              }
-            default:
-              return typed_source->call(a1);
+            return bs.call2(source, a1, obj::nil::nil_const());
           }
-        }
-        else if constexpr(std::same_as<T, obj::persistent_hash_set>
-                          || std::same_as<T, obj::persistent_hash_map>
-                          || std::same_as<T, obj::persistent_array_map>
-                          || std::same_as<T, obj::transient_vector>
-                          || std::same_as<T, obj::transient_hash_set>
-                          || std::same_as<T, obj::keyword>)
-        {
-          return typed_source->call(a1);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 1 arg to: {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        default:
+          return bs.call1(source, a1);
+      }
+    }
+    auto const call1(bs.call1);
+    if (call1 != nullptr)
+    {
+      return call1(source, a1);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 1 arg to: {}",
+                                            bs.to_string(source)) };
+    }
   }
 
   object_ptr dynamic_call(object_ptr source, object_ptr const a1, object_ptr const a2)

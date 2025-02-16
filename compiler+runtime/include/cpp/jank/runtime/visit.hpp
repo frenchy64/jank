@@ -812,6 +812,24 @@ namespace jank::runtime
         this->call9 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6, object_ptr const a7, object_ptr const a8) { return expect_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7, a8); };
         this->get_arity_flags = [](object_ptr const o) { return expect_object<T>(o)->get_arity_flags(); };
       }
+      //TODO test for call1 arity
+      if constexpr(std::same_as<T, obj::persistent_hash_set>
+          || std::same_as<T, obj::persistent_hash_map>
+          || std::same_as<T, obj::persistent_array_map>
+          || std::same_as<T, obj::transient_vector>
+          || std::same_as<T, obj::transient_hash_set>
+          || std::same_as<T, obj::keyword>)
+      {
+        this->call1 = [](object_ptr const o, object_ptr const a0) { return expect_object<T>(o)->call(a0); };
+      }
+      //TODO test for call2 arity
+      if constexpr(std::same_as<T, obj::persistent_hash_map>
+          || std::same_as<T, obj::persistent_array_map>
+          || std::same_as<T, obj::transient_hash_set>
+          || std::same_as<T, obj::keyword>)
+      {
+        this->call2 = [](object_ptr const o, object_ptr const a0, object_ptr const a1) { return expect_object<T>(o)->call(a0, a1); };
+      }
       if constexpr(behavior::nameable<T>)
       {
         this->is_named = true;
