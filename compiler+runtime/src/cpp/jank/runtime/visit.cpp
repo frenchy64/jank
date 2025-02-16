@@ -17,15 +17,14 @@
 
 namespace jank::runtime
 {
-  template <typename T>
-  behaviors<T> object_behaviors(native_box<T> type)
+  behaviors object_behaviors(object_ptr type)
   {
     return visit_object(
-      [&](auto const typed_o) -> behaviors<T> {
+      [&](auto const typed_o) -> behaviors {
         using S = typename decltype(typed_o)::value_type;
 
         // TODO: cache
-        behaviors<S const> bs{};
+        behaviors bs{};
         if constexpr(behavior::seqable<S>)
         {
           bs.is_seqable = true;
@@ -49,10 +48,12 @@ namespace jank::runtime
         if constexpr(behavior::transientable<S>)
         {
           bs.is_transientable = true;
-          bs.to_transient = [](native_box<S const> const o) { o->to_transient(); };
+          bs.to_transient = [](object_ptr const o) {
+            return expect_object<S>(o)->to_transient();
+          };
         }
 
-        return reinterpret_cast<native_box<T>>(bs);
+        return bs;
       },
       type);
   }
