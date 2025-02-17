@@ -1550,62 +1550,59 @@ namespace jank::analyze
                                               read::source::unknown);
     }
 
-    return runtime::visit_object(
-      [&](auto const typed_o) -> processor::expression_result {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(std::same_as<T, runtime::obj::persistent_list>)
-        {
-          return analyze_call(typed_o, current_frame, position, fn_ctx, needs_box);
-        }
-        else if constexpr(std::same_as<T, runtime::obj::persistent_vector>)
-        {
-          return analyze_vector(typed_o, current_frame, position, fn_ctx, needs_box);
-        }
-        else if constexpr(runtime::behavior::map_like<T>)
-        {
-          return analyze_map(typed_o, current_frame, position, fn_ctx, needs_box);
-        }
-        else if constexpr(runtime::behavior::set_like<T>)
-        {
-          return analyze_set(typed_o, current_frame, position, fn_ctx, needs_box);
-        }
-        else if constexpr(runtime::behavior::number_like<T>
-                          || std::same_as<T, runtime::obj::boolean>
-                          || std::same_as<T, runtime::obj::keyword>
-                          || std::same_as<T, runtime::obj::nil>
-                          || std::same_as<T, runtime::obj::persistent_string>
-                          || std::same_as<T, runtime::obj::character>)
-        {
-          return analyze_primitive_literal(o, current_frame, position, fn_ctx, needs_box);
-        }
-        else if constexpr(std::same_as<T, runtime::obj::symbol>)
-        {
-          return analyze_symbol(typed_o, current_frame, position, fn_ctx, needs_box);
-        }
-        /* This is used when building code from macros; they may end up being other forms of
-         * sequences and not just lists. */
-        if constexpr(runtime::behavior::sequential<T>)
-        {
-          return analyze_call(runtime::obj::persistent_list::create(typed_o->seq()),
-                              current_frame,
-                              position,
-                              fn_ctx,
-                              needs_box);
-        }
-        else if constexpr(std::same_as<T, runtime::var>)
-        {
-          return analyze_var_val(typed_o, current_frame, position, fn_ctx, needs_box);
-        }
-        else
-        {
-          return error::internal_analysis_failure(
-            fmt::format("Unimplemented analysis for object type '{}'",
-                        object_type_str(typed_o->base.type)),
-            meta_source(o));
-        }
-      },
-      o);
+    // TODO switch by concept
+    auto const bs(object_behaviors(o));
+    auto const otype(o->type);
+    if(otype == runtime::object_type::persistent_list)
+    {
+      return analyze_call(expect_object<runtime::obj::persistent_list>(o), current_frame, position, fn_ctx, needs_box);
+    }
+    else if(otype == runtime::object_type::persistent_vector)
+    {
+      return analyze_vector(expect_object<runtime::obj::persistent_vector>(o), current_frame, position, fn_ctx, needs_box);
+    }
+    else if(bs.is_map)
+    {
+      return analyze_map(o, current_frame, position, fn_ctx, needs_box);
+    }
+    else if(bs.is_set)
+    {
+      return analyze_set(o, current_frame, position, fn_ctx, needs_box);
+    }
+    else if(bs.is_number_like
+                      || otype == runtime::object_type::boolean
+                      || otype == runtime::object_type::keyword
+                      || otype == runtime::object_type::nil
+                      || otype == runtime::object_type::persistent_string
+                      || otype == runtime::object_type::character)
+    {
+      return analyze_primitive_literal(o, current_frame, position, fn_ctx, needs_box);
+    }
+    else if(otype == runtime::object_type::symbol)
+    {
+      return analyze_symbol(try_object<runtime::obj::symbol>(o), current_frame, position, fn_ctx, needs_box);
+    }
+    /* This is used when building code from macros; they may end up being other forms of
+     * sequences and not just lists. */
+    if(bs.is_sequential)
+    {
+      return analyze_call(runtime::obj::persistent_list::create(bs.seq(o)),
+                          current_frame,
+                          position,
+                          fn_ctx,
+                          needs_box);
+    }
+    else if(otype == runtime::object_type::var)
+    {
+      return analyze_var_val(try_object<runtime::var>(o), current_frame, position, fn_ctx, needs_box);
+    }
+    else
+    {
+      return error::internal_analysis_failure(
+        fmt::format("Unimplemented analysis for object type '{}'",
+                    object_type_str(bs.base(o).type)),
+        meta_source(o));
+    }
   }
 
   native_bool processor::is_special(runtime::object_ptr const form)

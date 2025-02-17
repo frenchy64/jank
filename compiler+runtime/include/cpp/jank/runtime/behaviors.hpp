@@ -37,9 +37,9 @@ namespace jank::runtime
     native_bool is_named{};
     native_bool is_object_like{}; //redundant?
     native_bool is_seqable{};
+    native_bool is_sequential{};
     native_bool is_sequenceable_in_place{};
     native_bool is_sequenceable{};
-    native_bool is_sequential{};
     native_bool is_set{};
     native_bool is_number_like{};
     native_bool is_transientable{};
@@ -51,6 +51,7 @@ namespace jank::runtime
     std::function<native_persistent_string(object_ptr const)> to_code_string{};
     std::function<native_hash(object_ptr const)> to_hash{};
     std::function<native_bool(object_ptr const, object_ptr const)> equal{};
+    std::function<object(object_ptr const)> base{};
 
     /* behavior::number_like */
     std::function<native_integer(object_ptr const o)> to_integer{};

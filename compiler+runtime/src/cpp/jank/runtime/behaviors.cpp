@@ -85,12 +85,17 @@ namespace jank::runtime
       this->equal = [](object_ptr const lhs, object_ptr const rhs) {
         return try_object<T>(lhs)->equal(*rhs);
       };
+      this->base = [](object_ptr const o) { return try_object<T>(o)->base; };
     }
     if constexpr(behavior::seqable<T>)
     {
       this->is_seqable = true;
       this->seq = [](object_ptr const o) { return try_object<T>(o)->seq(); };
       this->fresh_seq = [](object_ptr const o) { return try_object<T>(o)->fresh_seq(); };
+    }
+    if constexpr(behavior::sequential<T>)
+    {
+      this->is_sequential = true;
     }
     if constexpr(behavior::sequenceable<T>)
     {
