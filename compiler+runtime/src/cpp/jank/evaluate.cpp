@@ -423,9 +423,9 @@ namespace jank::evaluate
     }
     else
     {
-      throw std::runtime_error{ fmt::format("invalid call with 0 args to: {}",
-                                            expr.arg_exprs.size(),
-                                            bs.to_string(source)) };
+      throw std::runtime_error{
+        fmt::format("invalid call with 0 args to: {}", expr.arg_exprs.size(), bs.to_string(source))
+      };
     }
   }
 
