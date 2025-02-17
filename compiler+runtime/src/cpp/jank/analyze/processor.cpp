@@ -1263,51 +1263,37 @@ namespace jank::analyze
                          native_bool const)
   {
     /* TODO: Detect literal and act accordingly. */
-    return visit_map_like(
-      [&](auto const typed_o) -> processor::expression_result {
-        using T = typename decltype(typed_o)::value_type;
+    auto const bs(object_behaviors(o));
+    native_vector<std::pair<expression_ptr, expression_ptr>> exprs;
+    exprs.reserve(bs.count(o));
 
-        native_vector<std::pair<expression_ptr, expression_ptr>> exprs;
-        exprs.reserve(typed_o->data.size());
 
-        for(auto const &kv : typed_o->data)
-        {
-          /* The two maps (hash and sorted) have slightly different iterators, so we need to
-           * pull out the entries differently. */
-          object_ptr first{}, second{};
-          if constexpr(std::same_as<T, obj::persistent_sorted_map>)
-          {
-            auto const &entry(kv.get());
-            first = entry.first;
-            second = entry.second;
-          }
-          else
-          {
-            first = kv.first;
-            second = kv.second;
-          }
+    // TODO next_in_place / first perf
+    for(auto d = bs.fresh_seq(o); d != nullptr; d = object_behaviors(d).next_in_place(d))
+    {
+      auto const kv(runtime::first(d));
 
-          auto k_expr(analyze(first, current_frame, expression_position::value, fn_ctx, true));
-          if(k_expr.is_err())
-          {
-            return k_expr.expect_err_move();
-          }
-          auto v_expr(analyze(second, current_frame, expression_position::value, fn_ctx, true));
-          if(v_expr.is_err())
-          {
-            return v_expr.expect_err_move();
-          }
-          exprs.emplace_back(k_expr.expect_ok_move(), v_expr.expect_ok_move());
-        }
+      auto k_expr(
+        analyze(runtime::first(kv), current_frame, expression_position::value, fn_ctx, true));
+      if(k_expr.is_err())
+      {
+        return k_expr.expect_err_move();
+      }
+      auto v_expr(
+        analyze(runtime::second(kv), current_frame, expression_position::value, fn_ctx, true));
+      if(v_expr.is_err())
+      {
+        return v_expr.expect_err_move();
+      }
+      exprs.emplace_back(k_expr.expect_ok_move(), v_expr.expect_ok_move());
+    }
 
-        /* TODO: Uniqueness check. */
-        return make_box<expression>(expr::map<expression>{
-          expression_base{ {}, position, current_frame, true },
-          std::move(exprs),
-          typed_o->meta,
-        });
-      },
-      o);
+    /* TODO: Uniqueness check. */
+    return make_box<expression>(expr::map<expression>{
+      expression_base{ {}, position, current_frame, true },
+      std::move(exprs),
+      bs.meta(o),
+    });
   }
 
   processor::expression_result
