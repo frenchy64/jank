@@ -570,20 +570,15 @@ namespace jank::runtime
       return nil;
     }
 
-    return visit_object(
-      [&](auto const typed_s) -> object_ptr {
-        using S = typename decltype(typed_s)::value_type;
-
-        if constexpr(behavior::associatively_readable<S>)
-        {
-          return typed_s->get_entry(key);
-        }
-        else
-        {
-          return nil;
-        }
-      },
-      s);
+    auto const bs(object_behaviors(s));
+    if(bs.is_associatively_readable)
+    {
+      return bs.get_entry(s, key);
+    }
+    else
+    {
+      return nil;
+    }
   }
 
   native_bool contains(object_ptr const s, object_ptr const key)
@@ -593,20 +588,15 @@ namespace jank::runtime
       return false;
     }
 
-    return visit_object(
-      [&](auto const typed_s) -> native_bool {
-        using S = typename decltype(typed_s)::value_type;
-
-        if constexpr(behavior::associatively_readable<S> || behavior::set_like<S>)
-        {
-          return typed_s->contains(key);
-        }
-        else
-        {
-          return false;
-        }
-      },
-      s);
+    auto const bs(object_behaviors(s));
+    if(bs.is_associatively_readable || bs.is_set)
+    {
+      return bs.contains(s, key);
+    }
+    else
+    {
+      return false;
+    }
   }
 
   object_ptr merge(object_ptr const m, object_ptr const other)

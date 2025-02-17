@@ -778,6 +778,7 @@ namespace jank::runtime
         this->get_default = [](object_ptr const m, object_ptr const k, object_ptr const d) {
           return try_object<T>(m)->get(k, d);
         };
+        this->get_entry = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->get_entry(k); };
       }
       if constexpr(behavior::associatively_writable_in_place<T>)
       {
@@ -953,6 +954,10 @@ namespace jank::runtime
       {
         this->is_set = true;
       }
+      if constexpr(behavior::set_like<T> || behavior::associatively_readable<T>)
+      {
+        this->contains = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->contains(k); };
+      }
       if constexpr(behavior::conjable<T>)
       {
         this->is_conjable = true;
@@ -1010,10 +1015,14 @@ namespace jank::runtime
     /* behavior::associatively_writable */
     std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const v)> assoc{};
     std::function<object_ptr(object_ptr const m, object_ptr const k)> dissoc{};
-    std::function<object_ptr(object_ptr const m, object_ptr const k)> get{};
-    std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const d)>
-      get_default{};
 
+    /* behavior::associatively_readable */
+    std::function<object_ptr(object_ptr const m, object_ptr const k)> get{};
+    std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const d)> get_default{};
+    std::function<object_ptr(object_ptr const m, object_ptr const k)> get_entry{};
+
+    /* behavior::associatively_readable || behavior::set_like */
+    std::function<native_bool(object_ptr const m, object_ptr const k)> contains{};
 
     /* behavior::sequenceable */
     std::function<object_ptr(object_ptr const)> first{};
