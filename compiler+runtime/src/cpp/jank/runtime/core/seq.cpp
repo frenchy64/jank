@@ -303,16 +303,16 @@ namespace jank::runtime
 
   object_ptr next(object_ptr const s)
   {
-    if (is_nil(s))
+    if(is_nil(s))
     {
       return s;
     }
     auto const bs(object_behaviors(s));
-    if (bs.is_sequenceable)
+    if(bs.is_sequenceable)
     {
       return bs.next(s) ?: obj::nil::nil_const();
     }
-    else if (bs.is_seqable)
+    else if(bs.is_seqable)
     {
       auto const seq(bs.seq(s));
       if(!seq)
@@ -330,20 +330,20 @@ namespace jank::runtime
 
   object_ptr next_in_place(object_ptr const s)
   {
-    if (is_nil(s))
+    if(is_nil(s))
     {
       return s;
     }
     auto const bs(object_behaviors(s));
-    if (bs.is_sequenceable_in_place)
+    if(bs.is_sequenceable_in_place)
     {
       return bs.next_in_place(s) ?: obj::nil::nil_const();
     }
-    else if (bs.is_sequenceable)
+    else if(bs.is_sequenceable)
     {
       return bs.next(s) ?: obj::nil::nil_const();
     }
-    else if (bs.is_seqable)
+    else if(bs.is_seqable)
     {
       auto const ret(bs.seq(s));
       if(!ret)
