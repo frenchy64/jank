@@ -164,7 +164,7 @@ namespace jank::runtime
   object_ptr assoc_in_place(object_ptr const coll, object_ptr const k, object_ptr const v)
   {
     auto const bs(object_behaviors(coll));
-    if (bs.is_associatively_writable_in_place)
+    if(bs.is_associatively_writable_in_place)
     {
       return bs.assoc_in_place(coll, k, v);
     }
