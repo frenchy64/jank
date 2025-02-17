@@ -365,21 +365,19 @@ namespace jank::runtime
     {
       return obj::persistent_list::empty();
     }
-    return visit_seqable(
-      [=](auto const typed_s) -> object_ptr {
-        auto const seq(typed_s->seq());
-        if(!seq)
-        {
-          return obj::persistent_list::empty();
-        }
-        auto const ret(seq->next());
-        if(ret == nullptr)
-        {
-          return obj::persistent_list::empty();
-        }
-        return ret;
-      },
-      s);
+    auto const bs(object_behaviors(s));
+    auto const seq(bs.seq(s));
+    if(!seq)
+    {
+      return obj::persistent_list::empty();
+    }
+    //TODO specialize is_sequenceable case to save visit (like next above)
+    auto const ret(runtime::next(s));
+    if(is_nil(ret)) //TODO update condition with above change ^^
+    {
+      return obj::persistent_list::empty();
+    }
+    return ret;
   }
 
   object_ptr cons(object_ptr const head, object_ptr const tail)
