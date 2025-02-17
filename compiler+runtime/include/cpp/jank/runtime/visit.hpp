@@ -769,16 +769,25 @@ namespace jank::runtime
         this->is_associative = true;
         this->is_associatively_writable = true;
         this->is_associatively_readable = true;
-        this->assoc = [](object_ptr const m, object_ptr const k, object_ptr const v) { return try_object<T>(m)->assoc(k, v); };
-        this->dissoc = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->dissoc(k); };
+        this->assoc = [](object_ptr const m, object_ptr const k, object_ptr const v) {
+          return try_object<T>(m)->assoc(k, v);
+        };
+        this->dissoc
+          = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->dissoc(k); };
         this->get = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->get(k); };
-        this->get_default = [](object_ptr const m, object_ptr const k, object_ptr const d) { return try_object<T>(m)->get(k, d); };
+        this->get_default = [](object_ptr const m, object_ptr const k, object_ptr const d) {
+          return try_object<T>(m)->get(k, d);
+        };
       }
       if constexpr(behavior::associatively_writable_in_place<T>)
       {
         this->is_associatively_writable_in_place = true;
-        this->assoc_in_place = [](object_ptr const m, object_ptr const k, object_ptr const v) { return try_object<T>(m)->assoc_in_place(k, v); };
-        this->dissoc_in_place = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->dissoc_in_place(k); };
+        this->assoc_in_place = [](object_ptr const m, object_ptr const k, object_ptr const v) {
+          return try_object<T>(m)->assoc_in_place(k, v);
+        };
+        this->dissoc_in_place = [](object_ptr const m, object_ptr const k) {
+          return try_object<T>(m)->dissoc_in_place(k);
+        };
       }
       if constexpr(behavior::countable<T>)
       {
@@ -947,9 +956,8 @@ namespace jank::runtime
       if constexpr(behavior::conjable<T>)
       {
         this->is_conjable = true;
-        this->conj = [](object_ptr const o, object_ptr const v) {
-          return try_object<T>(o)->conj(v);
-        };
+        this->conj
+          = [](object_ptr const o, object_ptr const v) { return try_object<T>(o)->conj(v); };
       }
       if constexpr(behavior::conjable_in_place<T>)
       {
@@ -995,14 +1003,16 @@ namespace jank::runtime
     std::function<native_bool(object_ptr const, object_ptr const)> equal{};
 
     /* behavior::associatively_writable_in_place */
-    std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const v)> assoc_in_place{};
+    std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const v)>
+      assoc_in_place{};
     std::function<object_ptr(object_ptr const m, object_ptr const k)> dissoc_in_place{};
 
     /* behavior::associatively_writable */
     std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const v)> assoc{};
     std::function<object_ptr(object_ptr const m, object_ptr const k)> dissoc{};
     std::function<object_ptr(object_ptr const m, object_ptr const k)> get{};
-    std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const d)> get_default{};
+    std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const d)>
+      get_default{};
 
 
     /* behavior::sequenceable */
