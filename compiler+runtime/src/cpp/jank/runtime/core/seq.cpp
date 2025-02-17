@@ -439,14 +439,13 @@ namespace jank::runtime
   object_ptr assoc(object_ptr const m, object_ptr const k, object_ptr const v)
   {
     auto const bs(object_behaviors(m));
-    if (bs.is_associatively_writable)
+    if(bs.is_associatively_writable)
     {
       return bs.assoc(m, k, v);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not associatively writable: {}",
-                                            bs.to_string(m)) };
+      throw std::runtime_error{ fmt::format("not associatively writable: {}", bs.to_string(m)) };
     }
   }
 
