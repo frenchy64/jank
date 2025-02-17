@@ -264,31 +264,15 @@ namespace jank::runtime
       return obj::nil::nil_const();
     }
 
-    return visit_object(
-      [](auto const typed_m) -> object_ptr {
-        using T = typename decltype(typed_m)::value_type;
-
-        if constexpr(behavior::metadatable<T>)
-        {
-          return typed_m->meta.unwrap_or(obj::nil::nil_const());
-        }
-        else
-        {
-          return obj::nil::nil_const();
-        }
-      },
-      m);
-    /*
     auto const bs(object_behaviors(m));
-    if (bs.is_metadatable)
+    if(bs.is_metadatable)
     {
-      return bs.get_meta(m);
+      return bs.meta(m).unwrap_or(obj::nil::nil_const());
     }
     else
     {
       return obj::nil::nil_const();
     }
-    */
   }
 
   object_ptr with_meta(object_ptr const o, object_ptr const m)
