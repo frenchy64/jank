@@ -162,26 +162,24 @@ namespace jank::hash
   uint32_t ordered(runtime::object const * const sequence)
   {
     assert(sequence);
-    return [](auto const typed_sequence) -> uint32_t {
-      auto const bs(object_behaviors(typed_sequence));
-      if(bs.is_sequenceable)
+    auto const bs(object_behaviors(sequence));
+    if(bs.is_sequenceable)
+    {
+      uint32_t n{};
+      uint32_t hash{ 1 };
+      for(auto it(bs.fresh_seq(sequence)); it != nullptr;
+          it = object_behaviors(it).next_in_place(it))
       {
-        uint32_t n{};
-        uint32_t hash{ 1 };
-        for(auto it(bs.fresh_seq(typed_sequence)); it != nullptr;
-            it = object_behaviors(it).next_in_place(it))
-        {
-          hash = 31 * hash + visit(object_behaviors(it).first(it));
-          ++n;
-        }
+        hash = 31 * hash + visit(object_behaviors(it).first(it));
+        ++n;
+      }
 
-        return mix_collection_hash(hash, n);
-      }
-      else
-      {
-        return bs.to_hash(typed_sequence);
-      }
-    }(sequence);
+      return mix_collection_hash(hash, n);
+    }
+    else
+    {
+      return bs.to_hash(sequence);
+    }
   }
 
   uint32_t unordered(runtime::object const * const sequence)
