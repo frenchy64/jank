@@ -164,14 +164,14 @@ namespace jank::hash
     assert(sequence);
     return runtime::visit_object(
       [](auto const typed_sequence) -> uint32_t {
-        using T = typename decltype(typed_sequence)::value_type;
-        if constexpr(runtime::behavior::sequenceable<T>)
+        auto const bs(object_behaviors(typed_sequence));
+        if(bs.is_sequenceable)
         {
           uint32_t n{};
           uint32_t hash{ 1 };
-          for(auto it(fresh_seq(typed_sequence)); it != nullptr; it = next_in_place(it))
+          for(auto it(bs.fresh_seq(typed_sequence)); it != nullptr; it = object_behaviors(it).next_in_place(it))
           {
-            hash = 31 * hash + visit(it->first());
+            hash = 31 * hash + visit(object_behaviors(it).first(it));
             ++n;
           }
 
@@ -179,7 +179,7 @@ namespace jank::hash
         }
         else
         {
-          return typed_sequence->to_hash();
+          return bs.to_hash(typed_sequence);
         }
       },
       sequence);
