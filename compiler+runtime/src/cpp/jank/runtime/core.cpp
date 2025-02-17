@@ -106,28 +106,24 @@ namespace jank::runtime
 
   object_ptr print(object_ptr const args)
   {
-    visit_object(
-      [](auto const typed_args) {
-        using T = typename decltype(typed_args)::value_type;
-
-        if constexpr(behavior::sequenceable<T>)
-        {
-          util::string_builder buff;
-          runtime::to_string(typed_args->first(), buff);
-          for(auto it(next_in_place(typed_args)); it != nullptr; it = next_in_place(it))
-          {
-            buff(' ');
-            runtime::to_string(it->first(), buff);
-          }
-          std::fwrite(buff.data(), 1, buff.size(), stdout);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("expected a sequence: {}",
-                                                typed_args->to_string()) };
-        }
-      },
-      args);
+    auto const bs(object_behaviors(args));
+    if(bs.is_sequenceable)
+    {
+      util::string_builder buff;
+      runtime::to_string(bs.first(args), buff);
+      // TODO next_in_place / first perf
+      for(auto it(bs.next_in_place(args)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+      {
+        buff(' ');
+        runtime::to_string(first(it), buff);
+      }
+      std::fwrite(buff.data(), 1, buff.size(), stdout);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("expected a sequence: {}",
+                                            bs.to_string(args)) };
+    }
     return obj::nil::nil_const();
   }
 
