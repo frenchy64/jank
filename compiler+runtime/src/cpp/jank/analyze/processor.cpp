@@ -4,6 +4,7 @@
 
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/context.hpp>
 #include <jank/runtime/behavior/number_like.hpp>
 #include <jank/runtime/behavior/sequential.hpp>
@@ -440,13 +441,11 @@ namespace jank::analyze
       {
         auto arity_list_obj(it.first().unwrap());
 
-        auto const err(runtime::visit_object(
-          [&](auto const typed_arity_list) -> result<void, error_ptr> {
-            using T = typename decltype(typed_arity_list)::value_type;
-
-            if constexpr(runtime::behavior::sequenceable<T>)
+        auto const err([&]() -> result<void, error_ptr> {
+            auto const bs(object_behaviors(arity_list_obj));
+            if(bs.is_sequenceable)
             {
-              auto arity_list(runtime::obj::persistent_list::create(typed_arity_list));
+              auto arity_list(runtime::obj::persistent_list::create(arity_list_obj));
 
               auto result(analyze_fn_arity(arity_list.data, name, current_frame));
               if(result.is_err())
@@ -463,8 +462,7 @@ namespace jank::analyze
                 "parameter vector",
                 meta_source(list));
             }
-          },
-          arity_list_obj));
+          }());
 
         if(err.is_err())
         {
@@ -1041,33 +1039,31 @@ namespace jank::analyze
     for(auto it(next_in_place(list->fresh_seq())); it != nullptr; it = next_in_place(it))
     {
       auto const item(it->first());
-      auto const type(runtime::visit_seqable(
-        [](auto const typed_item) {
-          using T = typename decltype(typed_item)::value_type;
-
-          if constexpr(std::same_as<T, obj::nil>)
+      auto const type([](auto const item) {
+          if(is_nil(item))
           {
             return try_expression_type::other;
           }
+
+          auto const bs(object_behaviors(item));
+          if(!bs.is_seqable)
+          {
+            return try_expression_type::other;
+          }
+          auto const f(first(bs.seq(item)));
+          if(runtime::equal(f, &catch_))
+          {
+            return try_expression_type::catch_;
+          }
+          else if(runtime::equal(f, &finally_))
+          {
+            return try_expression_type::finally_;
+          }
           else
           {
-            auto const first(typed_item->seq()->first());
-            if(runtime::equal(first, &catch_))
-            {
-              return try_expression_type::catch_;
-            }
-            else if(runtime::equal(first, &finally_))
-            {
-              return try_expression_type::finally_;
-            }
-            else
-            {
-              return try_expression_type::other;
-            }
+            return try_expression_type::other;
           }
-        },
-        []() { return try_expression_type::other; },
-        item));
+        }(item));
 
       switch(type)
       {
