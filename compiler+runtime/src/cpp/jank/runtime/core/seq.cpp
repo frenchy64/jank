@@ -29,18 +29,17 @@ namespace jank::runtime
       return true;
     }
     auto const bs(object_behaviors(o));
-    if (bs.is_seqable)
+    if(bs.is_seqable)
     {
       return bs.seq(o) == nullptr;
     }
-    else if (bs.is_countable)
+    else if(bs.is_countable)
     {
       return bs.count(o) == 0;
     }
     else
     {
-      throw std::runtime_error{ fmt::format("cannot check if this is empty: {}",
-                                            bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("cannot check if this is empty: {}", bs.to_string(o)) };
     }
   }
 
@@ -110,7 +109,7 @@ namespace jank::runtime
   object_ptr transient(object_ptr const o)
   {
     auto const bs(object_behaviors(o));
-    if (bs.is_transientable)
+    if(bs.is_transientable)
     {
       return bs.to_transient(o);
     }
@@ -123,7 +122,7 @@ namespace jank::runtime
   object_ptr persistent(object_ptr const o)
   {
     auto const bs(object_behaviors(o));
-    if (bs.is_persistentable)
+    if(bs.is_persistentable)
     {
       return bs.to_persistent(o);
     }
@@ -142,8 +141,7 @@ namespace jank::runtime
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not conjable_in_place: {}",
-                                            bs.to_string(coll)) };
+      throw std::runtime_error{ fmt::format("not conjable_in_place: {}", bs.to_string(coll)) };
     }
   }
 
@@ -1063,7 +1061,7 @@ namespace jank::runtime
   object_ptr chunk_first(object_ptr const o)
   {
     auto const bs(object_behaviors(o));
-    if (bs.is_chunkable)
+    if(bs.is_chunkable)
     {
       return bs.chunked_first(o);
     }
@@ -1076,7 +1074,7 @@ namespace jank::runtime
   object_ptr chunk_next(object_ptr const o)
   {
     auto const bs(object_behaviors(o));
-    if (bs.is_chunkable)
+    if(bs.is_chunkable)
     {
       return bs.chunked_next(o) ?: obj::nil::nil_const();
     }
@@ -1089,7 +1087,7 @@ namespace jank::runtime
   object_ptr chunk_rest(object_ptr const o)
   {
     auto const bs(object_behaviors(o));
-    if (bs.is_chunkable)
+    if(bs.is_chunkable)
     {
       return bs.chunked_next(o) ?: obj::persistent_list::empty();
     }

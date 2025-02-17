@@ -294,7 +294,7 @@ namespace jank::runtime
   object_ptr with_meta(object_ptr const o, object_ptr const m)
   {
     auto const bs(object_behaviors(o));
-    if (bs.is_metadatable)
+    if(bs.is_metadatable)
     {
       return bs.with_meta(o, m);
     }
@@ -307,7 +307,7 @@ namespace jank::runtime
   object_ptr reset_meta(object_ptr const o, object_ptr const m)
   {
     auto const bs(object_behaviors(o));
-    if (bs.is_metadatable)
+    if(bs.is_metadatable)
     {
       return bs.set_meta(o, m);
     }
@@ -393,7 +393,7 @@ namespace jank::runtime
   object_ptr namespace_(object_ptr const o)
   {
     auto const bs(object_behaviors(o));
-    if (bs.is_named)
+    if(bs.is_named)
     {
       auto const ns(bs.get_namespace(o));
       return (ns.empty() ? obj::nil::nil_const() : make_box<obj::persistent_string>(ns));

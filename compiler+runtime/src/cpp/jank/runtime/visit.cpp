@@ -9,7 +9,7 @@ namespace jank::runtime
   {
     return visit_object(
       [](auto const typed_o) -> behaviors {
-        static behaviors const bs{typed_o};
+        static behaviors const bs{ typed_o };
         return bs;
       },
       type);

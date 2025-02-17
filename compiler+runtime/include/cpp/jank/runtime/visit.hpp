@@ -736,9 +736,12 @@ namespace jank::runtime
       {
         this->is_object_like = true;
         this->to_string = [](object_ptr const o) { return try_object<T>(o)->to_string(); };
-        this->to_code_string = [](object_ptr const o) { return try_object<T>(o)->to_code_string(); };
+        this->to_code_string
+          = [](object_ptr const o) { return try_object<T>(o)->to_code_string(); };
         this->to_hash = [](object_ptr const o) { return try_object<T>(o)->to_hash(); };
-        this->equal = [](object_ptr const lhs, object_ptr const rhs) { return try_object<T>(lhs)->equal(*rhs); };
+        this->equal = [](object_ptr const lhs, object_ptr const rhs) {
+          return try_object<T>(lhs)->equal(*rhs);
+        };
       }
       if constexpr(behavior::seqable<T>)
       {
@@ -783,7 +786,8 @@ namespace jank::runtime
       {
         this->is_chunk_like = true;
         this->chunk_next = [](object_ptr const o) { return try_object<T>(o)->chunk_next(); };
-        this->chunk_next_in_place = [](object_ptr const o) { return try_object<T>(o)->chunk_next_in_place(); };
+        this->chunk_next_in_place
+          = [](object_ptr const o) { return try_object<T>(o)->chunk_next_in_place(); };
       }
       if constexpr(behavior::chunkable<T>)
       {
@@ -794,9 +798,8 @@ namespace jank::runtime
       if constexpr(behavior::metadatable<T>)
       {
         this->is_metadatable = true;
-        this->with_meta = [](object_ptr const o, object_ptr const m) {
-          return try_object<T>(o)->with_meta(m);
-        };
+        this->with_meta
+          = [](object_ptr const o, object_ptr const m) { return try_object<T>(o)->with_meta(m); };
         this->get_meta = [](object_ptr const o) {
           return try_object<T>(o)->meta.unwrap_or(obj::nil::nil_const());
         };
@@ -814,35 +817,101 @@ namespace jank::runtime
         this->is_function_like = true;
         //TODO start arguments from 1 instead of 0
         this->call0 = [](object_ptr const o) { return try_object<T>(o)->call(); };
-        this->call1 = [](object_ptr const o, object_ptr const a0) { return try_object<T>(o)->call(a0); };
-        this->call2 = [](object_ptr const o, object_ptr const a0, object_ptr const a1) { return try_object<T>(o)->call(a0, a1); };
-        this->call3 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2) { return try_object<T>(o)->call(a0, a1, a2); };
-        this->call4 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3) { return try_object<T>(o)->call(a0, a1, a2, a3); };
-        this->call5 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4) { return try_object<T>(o)->call(a0, a1, a2, a3, a4); };
-        this->call6 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5) { return try_object<T>(o)->call(a0, a1, a2, a3, a4, a5); };
-        this->call7 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6) { return try_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6); };
-        this->call8 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6, object_ptr const a7) { return try_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7); };
-        this->call9 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6, object_ptr const a7, object_ptr const a8) { return try_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7, a8); };
-        this->call10 = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2, object_ptr const a3, object_ptr const a4, object_ptr const a5, object_ptr const a6, object_ptr const a7, object_ptr const a8, object_ptr const a9) { return try_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9); };
-        this->get_arity_flags = [](object_ptr const o) { return try_object<T>(o)->get_arity_flags(); };
+        this->call1
+          = [](object_ptr const o, object_ptr const a0) { return try_object<T>(o)->call(a0); };
+        this->call2 = [](object_ptr const o, object_ptr const a0, object_ptr const a1) {
+          return try_object<T>(o)->call(a0, a1);
+        };
+        this->call3
+          = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2) {
+              return try_object<T>(o)->call(a0, a1, a2);
+            };
+        this->call4 = [](object_ptr const o,
+                         object_ptr const a0,
+                         object_ptr const a1,
+                         object_ptr const a2,
+                         object_ptr const a3) { return try_object<T>(o)->call(a0, a1, a2, a3); };
+        this->call5
+          = [](object_ptr const o,
+               object_ptr const a0,
+               object_ptr const a1,
+               object_ptr const a2,
+               object_ptr const a3,
+               object_ptr const a4) { return try_object<T>(o)->call(a0, a1, a2, a3, a4); };
+        this->call6
+          = [](object_ptr const o,
+               object_ptr const a0,
+               object_ptr const a1,
+               object_ptr const a2,
+               object_ptr const a3,
+               object_ptr const a4,
+               object_ptr const a5) { return try_object<T>(o)->call(a0, a1, a2, a3, a4, a5); };
+        this->call7
+          = [](object_ptr const o,
+               object_ptr const a0,
+               object_ptr const a1,
+               object_ptr const a2,
+               object_ptr const a3,
+               object_ptr const a4,
+               object_ptr const a5,
+               object_ptr const a6) { return try_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6); };
+        this->call8 = [](object_ptr const o,
+                         object_ptr const a0,
+                         object_ptr const a1,
+                         object_ptr const a2,
+                         object_ptr const a3,
+                         object_ptr const a4,
+                         object_ptr const a5,
+                         object_ptr const a6,
+                         object_ptr const a7) {
+          return try_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7);
+        };
+        this->call9 = [](object_ptr const o,
+                         object_ptr const a0,
+                         object_ptr const a1,
+                         object_ptr const a2,
+                         object_ptr const a3,
+                         object_ptr const a4,
+                         object_ptr const a5,
+                         object_ptr const a6,
+                         object_ptr const a7,
+                         object_ptr const a8) {
+          return try_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7, a8);
+        };
+        this->call10 = [](object_ptr const o,
+                          object_ptr const a0,
+                          object_ptr const a1,
+                          object_ptr const a2,
+                          object_ptr const a3,
+                          object_ptr const a4,
+                          object_ptr const a5,
+                          object_ptr const a6,
+                          object_ptr const a7,
+                          object_ptr const a8,
+                          object_ptr const a9) {
+          return try_object<T>(o)->call(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
+        };
+        this->get_arity_flags
+          = [](object_ptr const o) { return try_object<T>(o)->get_arity_flags(); };
       }
       //TODO test for call1 arity
       if constexpr(std::same_as<T, obj::persistent_hash_set>
-          || std::same_as<T, obj::persistent_hash_map>
-          || std::same_as<T, obj::persistent_array_map>
-          || std::same_as<T, obj::transient_vector>
-          || std::same_as<T, obj::transient_hash_set>
-          || std::same_as<T, obj::keyword>)
+                   || std::same_as<T, obj::persistent_hash_map>
+                   || std::same_as<T, obj::persistent_array_map>
+                   || std::same_as<T, obj::transient_vector>
+                   || std::same_as<T, obj::transient_hash_set> || std::same_as<T, obj::keyword>)
       {
-        this->call1 = [](object_ptr const o, object_ptr const a0) { return try_object<T>(o)->call(a0); };
+        this->call1
+          = [](object_ptr const o, object_ptr const a0) { return try_object<T>(o)->call(a0); };
       }
       //TODO test for call2 arity
       if constexpr(std::same_as<T, obj::persistent_hash_map>
-          || std::same_as<T, obj::persistent_array_map>
-          || std::same_as<T, obj::transient_hash_set>
-          || std::same_as<T, obj::keyword>)
+                   || std::same_as<T, obj::persistent_array_map>
+                   || std::same_as<T, obj::transient_hash_set> || std::same_as<T, obj::keyword>)
       {
-        this->call2 = [](object_ptr const o, object_ptr const a0, object_ptr const a1) { return try_object<T>(o)->call(a0, a1); };
+        this->call2 = [](object_ptr const o, object_ptr const a0, object_ptr const a1) {
+          return try_object<T>(o)->call(a0, a1);
+        };
       }
       if constexpr(behavior::nameable<T>)
       {
@@ -866,7 +935,9 @@ namespace jank::runtime
       if constexpr(behavior::conjable_in_place<T>)
       {
         this->is_conjable_in_place = true;
-        this->conj_in_place = [](object_ptr const o, object_ptr const v) { return try_object<T>(o)->conj_in_place(v); };
+        this->conj_in_place = [](object_ptr const o, object_ptr const v) {
+          return try_object<T>(o)->conj_in_place(v);
+        };
       }
     }
 
@@ -925,7 +996,7 @@ namespace jank::runtime
     std::function<object_ptr(object_ptr const, object_ptr const)> with_meta{};
     std::function<object_ptr(object_ptr const)> get_meta{};
     std::function<object_ptr(object_ptr const, object_ptr const meta_obj)> set_meta{};
-    
+
     /* behavior::transientable */
     std::function<object_ptr(object_ptr const)> to_transient{};
 
@@ -947,14 +1018,72 @@ namespace jank::runtime
     std::function<object_ptr(object_ptr const)> call0{};
     std::function<object_ptr(object_ptr const, object_ptr const)> call1{};
     std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const)> call2{};
-    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call3{};
-    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call4{};
-    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call5{};
-    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call6{};
-    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call7{};
-    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call8{};
-    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call9{};
-    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const, object_ptr const)> call10{};
+    std::function<
+      object_ptr(object_ptr const, object_ptr const, object_ptr const, object_ptr const)>
+      call3{};
+    std::function<object_ptr(object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const)>
+      call4{};
+    std::function<object_ptr(object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const)>
+      call5{};
+    std::function<object_ptr(object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const)>
+      call6{};
+    std::function<object_ptr(object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const)>
+      call7{};
+    std::function<object_ptr(object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const)>
+      call8{};
+    std::function<object_ptr(object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const)>
+      call9{};
+    std::function<object_ptr(object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const,
+                             object_ptr const)>
+      call10{};
     std::function<size_t(object_ptr const)> get_arity_flags{};
 
     object_ptr to_runtime_data() const

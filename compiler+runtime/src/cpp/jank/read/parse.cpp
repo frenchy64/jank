@@ -471,26 +471,25 @@ namespace jank::read::parse
       return error::parse_invalid_meta_hint_value({ start_token.start, latest_token.end });
     }
 
-    auto meta_result(
-      [&](auto const val) -> processor::object_result {
-        if (is_keyword(val))
-        {
-          return object_source_info{
-            obj::persistent_array_map::create_unique(val, obj::boolean::true_const()),
-            start_token,
-            latest_token
-          };
-        }
-        auto const bs(object_behaviors(val));
-        if (bs.is_map)
-        {
-          return object_source_info{ val, start_token, latest_token };
-        }
-        else
-        {
-          return error::parse_invalid_meta_hint_value({ start_token.start, latest_token.end });
-        }
-      }(meta_val_result.expect_ok().unwrap().ptr));
+    auto meta_result([&](auto const val) -> processor::object_result {
+      if(is_keyword(val))
+      {
+        return object_source_info{
+          obj::persistent_array_map::create_unique(val, obj::boolean::true_const()),
+          start_token,
+          latest_token
+        };
+      }
+      auto const bs(object_behaviors(val));
+      if(bs.is_map)
+      {
+        return object_source_info{ val, start_token, latest_token };
+      }
+      else
+      {
+        return error::parse_invalid_meta_hint_value({ start_token.start, latest_token.end });
+      }
+    }(meta_val_result.expect_ok().unwrap().ptr));
     if(meta_result.is_err())
     {
       return meta_result;
@@ -510,11 +509,13 @@ namespace jank::read::parse
     auto const res(target_val_result.expect_ok().unwrap().ptr);
     auto const bs(object_behaviors(res));
 
-    if (bs.is_metadatable)
+    if(bs.is_metadatable)
     {
       auto const m(bs.get_meta(res));
       auto const mr(meta_result.expect_ok().unwrap().ptr);
-      return object_source_info{ bs.with_meta(res, is_nil(m) ? mr : merge(m, mr)), start_token, latest_token };
+      return object_source_info{ bs.with_meta(res, is_nil(m) ? mr : merge(m, mr)),
+                                 start_token,
+                                 latest_token };
     }
     else
     {

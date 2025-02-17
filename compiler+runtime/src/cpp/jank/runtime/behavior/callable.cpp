@@ -65,7 +65,7 @@ namespace jank::runtime
       }
     }
     auto const call1(bs.call1);
-    if (call1 != nullptr)
+    if(call1 != nullptr)
     {
       return call1(source, a1);
     }
@@ -105,7 +105,7 @@ namespace jank::runtime
       }
     }
     auto const call2(bs.call2);
-    if (call2 != nullptr)
+    if(call2 != nullptr)
     {
       return call2(source, a1, a2);
     }
@@ -265,26 +265,15 @@ namespace jank::runtime
       switch(mask)
       {
         case callable::mask_variadic_arity(0):
-          return bs.call1(source,
-            make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6));
+          return bs.call1(source, make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6));
         case callable::mask_variadic_arity(1):
-          return bs.call2(source, a1,
-                                    make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6));
+          return bs.call2(source, a1, make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6));
         case callable::mask_variadic_arity(2):
-          return bs.call3(source, a1,
-                                    a2,
-                                    make_box<obj::native_array_sequence>(a3, a4, a5, a6));
+          return bs.call3(source, a1, a2, make_box<obj::native_array_sequence>(a3, a4, a5, a6));
         case callable::mask_variadic_arity(3):
-          return bs.call4(source, a1,
-                                    a2,
-                                    a3,
-                                    make_box<obj::native_array_sequence>(a4, a5, a6));
+          return bs.call4(source, a1, a2, a3, make_box<obj::native_array_sequence>(a4, a5, a6));
         case callable::mask_variadic_arity(4):
-          return bs.call5(source, a1,
-                                    a2,
-                                    a3,
-                                    a4,
-                                    make_box<obj::native_array_sequence>(a5, a6));
+          return bs.call5(source, a1, a2, a3, a4, make_box<obj::native_array_sequence>(a5, a6));
         case callable::mask_variadic_arity(5):
           return bs.call6(source, a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6));
         case callable::mask_variadic_arity(6):
@@ -326,27 +315,15 @@ namespace jank::runtime
       switch(mask)
       {
         case callable::mask_variadic_arity(0):
-          return bs.call1(source,
-            make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7));
+          return bs.call1(source, make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7));
         case callable::mask_variadic_arity(1):
-          return bs.call2(source,
-            a1,
-            make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7));
+          return bs.call2(source, a1, make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7));
         case callable::mask_variadic_arity(2):
-          return bs.call3(source, a1,
-                                    a2,
-                                    make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7));
+          return bs.call3(source, a1, a2, make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7));
         case callable::mask_variadic_arity(3):
-          return bs.call4(source, a1,
-                                    a2,
-                                    a3,
-                                    make_box<obj::native_array_sequence>(a4, a5, a6, a7));
+          return bs.call4(source, a1, a2, a3, make_box<obj::native_array_sequence>(a4, a5, a6, a7));
         case callable::mask_variadic_arity(4):
-          return bs.call5(source, a1,
-                                    a2,
-                                    a3,
-                                    a4,
-                                    make_box<obj::native_array_sequence>(a5, a6, a7));
+          return bs.call5(source, a1, a2, a3, a4, make_box<obj::native_array_sequence>(a5, a6, a7));
         case callable::mask_variadic_arity(5):
           return bs.call6(source, a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6, a7));
         case callable::mask_variadic_arity(6):
@@ -392,33 +369,34 @@ namespace jank::runtime
       {
         case callable::mask_variadic_arity(0):
           return bs.call1(source,
-            make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7, a8));
+                          make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7, a8));
         case callable::mask_variadic_arity(1):
           return bs.call2(source,
-            a1,
-            make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7, a8));
+                          a1,
+                          make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7, a8));
         case callable::mask_variadic_arity(2):
           return bs.call3(source,
-            a1,
-            a2,
-            make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7, a8));
+                          a1,
+                          a2,
+                          make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7, a8));
         case callable::mask_variadic_arity(3):
-          return bs.call4(source, a1,
-                                    a2,
-                                    a3,
-                                    make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8));
+          return bs.call4(source,
+                          a1,
+                          a2,
+                          a3,
+                          make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8));
         case callable::mask_variadic_arity(4):
-          return bs.call5(source, a1,
-                                    a2,
-                                    a3,
-                                    a4,
-                                    make_box<obj::native_array_sequence>(a5, a6, a7, a8));
+          return bs
+            .call5(source, a1, a2, a3, a4, make_box<obj::native_array_sequence>(a5, a6, a7, a8));
         case callable::mask_variadic_arity(5):
-          return bs.call6(source, a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6, a7, a8));
+          return bs
+            .call6(source, a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6, a7, a8));
         case callable::mask_variadic_arity(6):
-          return bs.call7(source, a1, a2, a3, a4, a5, a6, make_box<obj::native_array_sequence>(a7, a8));
+          return bs
+            .call7(source, a1, a2, a3, a4, a5, a6, make_box<obj::native_array_sequence>(a7, a8));
         case callable::mask_variadic_arity(7):
-          return bs.call8(source, a1, a2, a3, a4, a5, a6, a7, make_box<obj::native_array_sequence>(a8));
+          return bs
+            .call8(source, a1, a2, a3, a4, a5, a6, a7, make_box<obj::native_array_sequence>(a8));
         case callable::mask_variadic_arity(8):
           if(!callable::is_variadic_ambiguous(arity_flags))
           {
@@ -460,33 +438,68 @@ namespace jank::runtime
       switch(mask)
       {
         case callable::mask_variadic_arity(0):
-          return bs.call1(source, 
-            make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7, a8, a9));
+          return bs.call1(source,
+                          make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7, a8, a9));
         case callable::mask_variadic_arity(1):
-          return bs.call2(source, 
-            a1,
-            make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7, a8, a9));
+          return bs.call2(source,
+                          a1,
+                          make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7, a8, a9));
         case callable::mask_variadic_arity(2):
-          return bs.call3(source, 
-            a1,
-            a2,
-            make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7, a8, a9));
+          return bs.call3(source,
+                          a1,
+                          a2,
+                          make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7, a8, a9));
         case callable::mask_variadic_arity(3):
-          return bs.call4(source, a1, a2, a3, make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8, a9));
+          return bs.call4(source,
+                          a1,
+                          a2,
+                          a3,
+                          make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8, a9));
         case callable::mask_variadic_arity(4):
-          return bs.call5(source, a1,
-                                    a2,
-                                    a3,
-                                    a4,
-                                    make_box<obj::native_array_sequence>(a5, a6, a7, a8, a9));
+          return bs.call5(source,
+                          a1,
+                          a2,
+                          a3,
+                          a4,
+                          make_box<obj::native_array_sequence>(a5, a6, a7, a8, a9));
         case callable::mask_variadic_arity(5):
-          return bs.call6(source, a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6, a7, a8, a9));
+          return bs.call6(source,
+                          a1,
+                          a2,
+                          a3,
+                          a4,
+                          a5,
+                          make_box<obj::native_array_sequence>(a6, a7, a8, a9));
         case callable::mask_variadic_arity(6):
-          return bs.call7(source, a1, a2, a3, a4, a5, a6, make_box<obj::native_array_sequence>(a7, a8, a9));
+          return bs.call7(source,
+                          a1,
+                          a2,
+                          a3,
+                          a4,
+                          a5,
+                          a6,
+                          make_box<obj::native_array_sequence>(a7, a8, a9));
         case callable::mask_variadic_arity(7):
-          return bs.call8(source, a1, a2, a3, a4, a5, a6, a7, make_box<obj::native_array_sequence>(a8, a9));
+          return bs.call8(source,
+                          a1,
+                          a2,
+                          a3,
+                          a4,
+                          a5,
+                          a6,
+                          a7,
+                          make_box<obj::native_array_sequence>(a8, a9));
         case callable::mask_variadic_arity(8):
-          return bs.call9(source, a1, a2, a3, a4, a5, a6, a7, a8, make_box<obj::native_array_sequence>(a9));
+          return bs.call9(source,
+                          a1,
+                          a2,
+                          a3,
+                          a4,
+                          a5,
+                          a6,
+                          a7,
+                          a8,
+                          make_box<obj::native_array_sequence>(a9));
         case callable::mask_variadic_arity(9):
           if(!callable::is_variadic_ambiguous(arity_flags))
           {
@@ -529,88 +542,96 @@ namespace jank::runtime
       switch(mask)
       {
         case callable::mask_variadic_arity(0):
-          return bs.call1(source, 
+          return bs.call1(
+            source,
             make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10));
         case callable::mask_variadic_arity(1):
-          return bs.call2(source, 
+          return bs.call2(
+            source,
             a1,
             make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7, a8, a9, a10));
         case callable::mask_variadic_arity(2):
-          return bs.call3(source, 
-            a1,
-            a2,
-            make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7, a8, a9, a10));
+          return bs.call3(source,
+                          a1,
+                          a2,
+                          make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7, a8, a9, a10));
         case callable::mask_variadic_arity(3):
-          return bs.call4(source, 
-            a1,
-            a2,
-            a3,
-            make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8, a9, a10));
+          return bs.call4(source,
+                          a1,
+                          a2,
+                          a3,
+                          make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8, a9, a10));
         case callable::mask_variadic_arity(4):
-          return bs.call5(source, 
-            a1,
-            a2,
-            a3,
-            a4,
-            make_box<obj::native_array_sequence>(a5, a6, a7, a8, a9, a10));
+          return bs.call5(source,
+                          a1,
+                          a2,
+                          a3,
+                          a4,
+                          make_box<obj::native_array_sequence>(a5, a6, a7, a8, a9, a10));
         case callable::mask_variadic_arity(5):
-          return bs.call6(source, a1,
-                                    a2,
-                                    a3,
-                                    a4,
-                                    a5,
-                                    make_box<obj::native_array_sequence>(a6, a7, a8, a9, a10));
+          return bs.call6(source,
+                          a1,
+                          a2,
+                          a3,
+                          a4,
+                          a5,
+                          make_box<obj::native_array_sequence>(a6, a7, a8, a9, a10));
         case callable::mask_variadic_arity(6):
-          return bs.call7(source, a1,
-                                    a2,
-                                    a3,
-                                    a4,
-                                    a5,
-                                    a6,
-                                    make_box<obj::native_array_sequence>(a7, a8, a9, a10));
+          return bs.call7(source,
+                          a1,
+                          a2,
+                          a3,
+                          a4,
+                          a5,
+                          a6,
+                          make_box<obj::native_array_sequence>(a7, a8, a9, a10));
         case callable::mask_variadic_arity(7):
-          return bs.call8(source, a1,
-                                    a2,
-                                    a3,
-                                    a4,
-                                    a5,
-                                    a6,
-                                    a7,
-                                    make_box<obj::native_array_sequence>(a8, a9, a10));
+          return bs.call8(source,
+                          a1,
+                          a2,
+                          a3,
+                          a4,
+                          a5,
+                          a6,
+                          a7,
+                          make_box<obj::native_array_sequence>(a8, a9, a10));
         case callable::mask_variadic_arity(8):
-          return bs.call9(source, a1,
-                                    a2,
-                                    a3,
-                                    a4,
-                                    a5,
-                                    a6,
-                                    a7,
-                                    a8,
-                                    make_box<obj::native_array_sequence>(a9, a10));
+          return bs.call9(source,
+                          a1,
+                          a2,
+                          a3,
+                          a4,
+                          a5,
+                          a6,
+                          a7,
+                          a8,
+                          make_box<obj::native_array_sequence>(a9, a10));
         case callable::mask_variadic_arity(9):
-          return bs.call10(source, a1,
-                                    a2,
-                                    a3,
-                                    a4,
-                                    a5,
-                                    a6,
-                                    a7,
-                                    a8,
-                                    a9,
-                                    make_box<obj::native_array_sequence>(a10));
+          return bs.call10(source,
+                           a1,
+                           a2,
+                           a3,
+                           a4,
+                           a5,
+                           a6,
+                           a7,
+                           a8,
+                           a9,
+                           make_box<obj::native_array_sequence>(a10));
         case callable::mask_variadic_arity(10):
           if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            return bs.call10(source, a1,
-                                      a2,
-                                      a3,
-                                      a4,
-                                      a5,
-                                      a6,
-                                      a7,
-                                      a8,
-                                      a9,
-                                      make_box<obj::native_array_sequence>(a10));
+            return bs.call10(source,
+                             a1,
+                             a2,
+                             a3,
+                             a4,
+                             a5,
+                             a6,
+                             a7,
+                             a8,
+                             a9,
+                             make_box<obj::native_array_sequence>(a10));
           }
         default:
           return bs.call10(source, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
@@ -664,8 +685,7 @@ namespace jank::runtime
             packed.reserve(9 + rest->count());
             packed.insert(packed.end(), { a2, a3, a4, a5, a6, a7, a8, a9, a10 });
             std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-            return bs.call2(source, a1,
-                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+            return bs.call2(source, a1, make_box<obj::native_vector_sequence>(std::move(packed)));
           }
         case callable::mask_variadic_arity(2):
           {
@@ -673,9 +693,10 @@ namespace jank::runtime
             packed.reserve(8 + rest->count());
             packed.insert(packed.end(), { a3, a4, a5, a6, a7, a8, a9, a10 });
             std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-            return bs.call3(source, a1,
-                                      a2,
-                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+            return bs.call3(source,
+                            a1,
+                            a2,
+                            make_box<obj::native_vector_sequence>(std::move(packed)));
           }
         case callable::mask_variadic_arity(3):
           {
@@ -683,10 +704,11 @@ namespace jank::runtime
             packed.reserve(7 + rest->count());
             packed.insert(packed.end(), { a4, a5, a6, a7, a8, a9, a10 });
             std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-            return bs.call4(source, a1,
-                                      a2,
-                                      a3,
-                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+            return bs.call4(source,
+                            a1,
+                            a2,
+                            a3,
+                            make_box<obj::native_vector_sequence>(std::move(packed)));
           }
         case callable::mask_variadic_arity(4):
           {
@@ -694,11 +716,12 @@ namespace jank::runtime
             packed.reserve(6 + rest->count());
             packed.insert(packed.end(), { a5, a6, a7, a8, a9, a10 });
             std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-            return bs.call5(source, a1,
-                                      a2,
-                                      a3,
-                                      a4,
-                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+            return bs.call5(source,
+                            a1,
+                            a2,
+                            a3,
+                            a4,
+                            make_box<obj::native_vector_sequence>(std::move(packed)));
           }
         case callable::mask_variadic_arity(5):
           {
@@ -706,12 +729,13 @@ namespace jank::runtime
             packed.reserve(5 + rest->count());
             packed.insert(packed.end(), { a6, a7, a8, a9, a10 });
             std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-            return bs.call6(source, a1,
-                                      a2,
-                                      a3,
-                                      a4,
-                                      a5,
-                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+            return bs.call6(source,
+                            a1,
+                            a2,
+                            a3,
+                            a4,
+                            a5,
+                            make_box<obj::native_vector_sequence>(std::move(packed)));
           }
         case callable::mask_variadic_arity(6):
           {
@@ -719,13 +743,14 @@ namespace jank::runtime
             packed.reserve(4 + rest->count());
             packed.insert(packed.end(), { a7, a8, a9, a10 });
             std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-            return bs.call7(source, a1,
-                                      a2,
-                                      a3,
-                                      a4,
-                                      a5,
-                                      a6,
-                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+            return bs.call7(source,
+                            a1,
+                            a2,
+                            a3,
+                            a4,
+                            a5,
+                            a6,
+                            make_box<obj::native_vector_sequence>(std::move(packed)));
           }
         case callable::mask_variadic_arity(7):
           {
@@ -733,14 +758,15 @@ namespace jank::runtime
             packed.reserve(3 + rest->count());
             packed.insert(packed.end(), { a8, a9, a10 });
             std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-            return bs.call8(source, a1,
-                                      a2,
-                                      a3,
-                                      a4,
-                                      a5,
-                                      a6,
-                                      a7,
-                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+            return bs.call8(source,
+                            a1,
+                            a2,
+                            a3,
+                            a4,
+                            a5,
+                            a6,
+                            a7,
+                            make_box<obj::native_vector_sequence>(std::move(packed)));
           }
         case callable::mask_variadic_arity(8):
           {
@@ -748,15 +774,16 @@ namespace jank::runtime
             packed.reserve(2 + rest->count());
             packed.insert(packed.end(), { a9, a10 });
             std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-            return bs.call9(source, a1,
-                                      a2,
-                                      a3,
-                                      a4,
-                                      a5,
-                                      a6,
-                                      a7,
-                                      a8,
-                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+            return bs.call9(source,
+                            a1,
+                            a2,
+                            a3,
+                            a4,
+                            a5,
+                            a6,
+                            a7,
+                            a8,
+                            make_box<obj::native_vector_sequence>(std::move(packed)));
           }
         case callable::mask_variadic_arity(9):
           {
@@ -764,16 +791,17 @@ namespace jank::runtime
             packed.reserve(1 + rest->count());
             packed.insert(packed.end(), { a10 });
             std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-            return bs.call10(source, a1,
-                                      a2,
-                                      a3,
-                                      a4,
-                                      a5,
-                                      a6,
-                                      a7,
-                                      a8,
-                                      a9,
-                                      make_box<obj::native_vector_sequence>(std::move(packed)));
+            return bs.call10(source,
+                             a1,
+                             a2,
+                             a3,
+                             a4,
+                             a5,
+                             a6,
+                             a7,
+                             a8,
+                             a9,
+                             make_box<obj::native_vector_sequence>(std::move(packed)));
           }
         default:
           throw std::runtime_error{ fmt::format("unsupported arity: {}", 10 + rest->count()) };
