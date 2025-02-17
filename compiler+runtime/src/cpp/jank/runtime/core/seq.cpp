@@ -439,20 +439,15 @@ namespace jank::runtime
 
   object_ptr get(object_ptr const m, object_ptr const key, object_ptr const fallback)
   {
-    return visit_object(
-      [&](auto const typed_m) -> object_ptr {
-        using T = typename decltype(typed_m)::value_type;
-
-        if constexpr(behavior::associatively_readable<T>)
-        {
-          return typed_m->get(key, fallback);
-        }
-        else
-        {
-          return fallback;
-        }
-      },
-      m);
+    auto const bs(object_behaviors(m));
+    if(bs.is_associatively_readable)
+    {
+      return bs.get_default(m, key, fallback);
+    }
+    else
+    {
+      return fallback;
+    }
   }
 
   /*
