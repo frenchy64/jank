@@ -464,20 +464,7 @@ namespace jank::runtime
 
   object_ptr get(object_ptr const m, object_ptr const key)
   {
-    return visit_object(
-      [&](auto const typed_m) -> object_ptr {
-        using T = typename decltype(typed_m)::value_type;
-
-        if constexpr(behavior::associatively_readable<T>)
-        {
-          return typed_m->get(key);
-        }
-        else
-        {
-          return obj::nil::nil_const();
-        }
-      },
-      m);
+    return get(m, key, obj::nil::nil_const());
   }
 
   object_ptr get(object_ptr const m, object_ptr const key, object_ptr const fallback)
