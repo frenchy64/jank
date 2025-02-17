@@ -73,7 +73,7 @@ namespace jank::runtime
     std::function<object_ptr(object_ptr const)> next{};
 
     /* behavior::countable */
-    std::function<object_ptr(object_ptr const)> count{};
+    std::function<size_t(object_ptr const)> count{};
 
     /* behavior::sequenceable_in_place */
     std::function<object_ptr(object_ptr const)> next_in_place{};
