@@ -6,7 +6,20 @@
 #include <jank/runtime/core.hpp>
 #include <jank/runtime/context.hpp>
 #include <jank/runtime/behavior/callable.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/obj/jit_function.hpp>
+#include <jank/runtime/obj/atom.hpp>
+#include <jank/runtime/obj/persistent_array_map.hpp>
+#include <jank/runtime/obj/persistent_hash_set.hpp>
+#include <jank/runtime/obj/persistent_hash_map.hpp>
+#include <jank/runtime/obj/persistent_sorted_map.hpp>
+#include <jank/runtime/obj/persistent_sorted_set.hpp>
+#include <jank/runtime/obj/multi_function.hpp>
+#include <jank/runtime/obj/lazy_sequence.hpp>
+#include <jank/runtime/obj/delay.hpp>
+#include <jank/runtime/obj/native_function_wrapper.hpp>
+#include <jank/runtime/obj/range.hpp>
+#include <jank/runtime/obj/keyword.hpp>
+#include <jank/runtime/obj/integer_range.hpp>
 
 namespace clojure::core_native
 {
@@ -522,20 +535,16 @@ jank_object_ptr jank_load_clojure_core_native()
         return obj::boolean::false_const();
       }
 
-      return visit_seqable(
-        [](auto const typed_rest, object_ptr const l) {
-          for(auto it(typed_rest->fresh_seq()); it != nullptr; it = it->next_in_place())
-          {
-            if(!equal(l, it->first()))
-            {
-              return obj::boolean::false_const();
-            }
-          }
+      //TODO redundant visits fresh_seq / first / next_in_place
+      for(auto it(fresh_seq(rest)); it != nullptr; it = next_in_place(it))
+      {
+        if(!equal(l, first(it)))
+        {
+          return obj::boolean::false_const();
+        }
+      }
 
-          return obj::boolean::true_const();
-        },
-        rest,
-        l);
+      return obj::boolean::true_const();
     };
     intern_fn_obj("=", fn);
   }
