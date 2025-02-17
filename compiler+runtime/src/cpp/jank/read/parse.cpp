@@ -507,34 +507,21 @@ namespace jank::read::parse
                                                    "Value missing after hint");
     }
 
-    return visit_object(
-      [&](auto const typed_val) -> processor::object_result {
-        using T = typename decltype(typed_val)::value_type;
-        if constexpr(behavior::metadatable<T>)
-        {
-          if(typed_val->meta.is_none())
-          {
-            return object_source_info{ typed_val->with_meta(meta_result.expect_ok().unwrap().ptr),
-                                       start_token,
-                                       latest_token };
-          }
-          else
-          {
-            return object_source_info{ typed_val->with_meta(
-                                         merge(typed_val->meta.unwrap(),
-                                               meta_result.expect_ok().unwrap().ptr)),
-                                       start_token,
-                                       latest_token };
-          }
-        }
-        else
-        {
-          return error::parse_invalid_meta_hint_target(
-            { start_token.start, latest_token.end },
-            "Target value for meta hint must accept metadata");
-        }
-      },
-      target_val_result.expect_ok().unwrap().ptr);
+    auto const res(target_val_result.expect_ok().unwrap().ptr);
+    auto const bs(object_behaviors(res));
+
+    if (bs.is_metadatable)
+    {
+      auto const m(bs.get_meta(res));
+      auto const mr(meta_result.expect_ok().unwrap().ptr);
+      return object_source_info{ bs.with_meta(res, is_nil(m) ? mr : merge(m, mr)), start_token, latest_token };
+    }
+    else
+    {
+      return error::parse_invalid_meta_hint_target(
+        { start_token.start, latest_token.end },
+        "Target value for meta hint must accept metadata");
+    }
   }
 
   processor::object_result processor::parse_reader_macro()
