@@ -38,20 +38,4 @@ namespace jank::runtime
       begin,
       end);
   }
-
-  template <typename T>
-  requires behavior::sequenceable<T>
-  auto rest(native_box<T> const seq)
-  {
-    if(!seq || seq == obj::nil::nil_const())
-    {
-      return obj::persistent_list::empty();
-    }
-    auto const ret(seq->next());
-    if(ret == nullptr)
-    {
-      return obj::persistent_list::empty();
-    }
-    return ret;
-  }
 }
