@@ -81,8 +81,7 @@ namespace jank::runtime
     {
       this->is_object_like = true;
       this->to_string = [](object_ptr const o) { return try_object<T>(o)->to_string(); };
-      this->to_code_string
-        = [](object_ptr const o) { return try_object<T>(o)->to_code_string(); };
+      this->to_code_string = [](object_ptr const o) { return try_object<T>(o)->to_code_string(); };
       this->to_hash = [](object_ptr const o) { return try_object<T>(o)->to_hash(); };
       this->equal = [](object_ptr const lhs, object_ptr const rhs) {
         return try_object<T>(lhs)->equal(*rhs);
@@ -199,13 +198,12 @@ namespace jank::runtime
                        object_ptr const a1,
                        object_ptr const a2,
                        object_ptr const a3) { return try_object<T>(o)->call(a0, a1, a2, a3); };
-      this->call5
-        = [](object_ptr const o,
-             object_ptr const a0,
-             object_ptr const a1,
-             object_ptr const a2,
-             object_ptr const a3,
-             object_ptr const a4) { return try_object<T>(o)->call(a0, a1, a2, a3, a4); };
+      this->call5 = [](object_ptr const o,
+                       object_ptr const a0,
+                       object_ptr const a1,
+                       object_ptr const a2,
+                       object_ptr const a3,
+                       object_ptr const a4) { return try_object<T>(o)->call(a0, a1, a2, a3, a4); };
       this->call6
         = [](object_ptr const o,
              object_ptr const a0,
@@ -316,15 +314,13 @@ namespace jank::runtime
     if constexpr(behavior::conjable<T>)
     {
       this->is_conjable = true;
-      this->conj
-        = [](object_ptr const o, object_ptr const v) { return try_object<T>(o)->conj(v); };
+      this->conj = [](object_ptr const o, object_ptr const v) { return try_object<T>(o)->conj(v); };
     }
     if constexpr(behavior::conjable_in_place<T>)
     {
       this->is_conjable_in_place = true;
-      this->conj_in_place = [](object_ptr const o, object_ptr const v) {
-        return try_object<T>(o)->conj_in_place(v);
-      };
+      this->conj_in_place
+        = [](object_ptr const o, object_ptr const v) { return try_object<T>(o)->conj_in_place(v); };
     }
   }
 

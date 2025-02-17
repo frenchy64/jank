@@ -832,10 +832,7 @@ namespace jank::runtime
       case 2:
         return dynamic_call(source, first(s), first(next_in_place(s)));
       case 3:
-        return dynamic_call(source,
-                            first(s),
-                            first(next_in_place(s)),
-                            first(next_in_place(s)));
+        return dynamic_call(source, first(s), first(next_in_place(s)), first(next_in_place(s)));
       case 4:
         return dynamic_call(source,
                             first(s),
