@@ -946,6 +946,12 @@ namespace jank::runtime
         this->is_derefable = true;
         this->deref = [](object_ptr const o) { return try_object<T>(o)->deref(); };
       }
+      if constexpr(behavior::indexable<T>)
+      {
+        this->is_indexable = true;
+        this->nth = [](object_ptr const o, object_ptr const i) { return try_object<T>(o)->nth(i); };
+        this->nth_default = [](object_ptr const o, object_ptr const i, object_ptr const d) { return try_object<T>(o)->nth(i, d); };
+      }
       if constexpr(behavior::map_like<T>)
       {
         this->is_map = true;
@@ -987,6 +993,7 @@ namespace jank::runtime
     native_bool is_collection{};
     native_bool is_countable{};
     native_bool is_derefable{};
+    native_bool is_indexable{};
     native_bool is_function_like{};
     native_bool is_map{};
     native_bool is_metadatable{};
@@ -1036,6 +1043,10 @@ namespace jank::runtime
 
     /* behavior::derefable */
     std::function<object_ptr(object_ptr const)> deref{};
+
+    /* behavior::indexable */
+    std::function<object_ptr(object_ptr const, object_ptr const)> nth{};
+    std::function<object_ptr(object_ptr const, object_ptr const, object_ptr const)> nth_default{};
 
     /* behavior::nameable */
     std::function<native_persistent_string(object_ptr const)> get_name{};

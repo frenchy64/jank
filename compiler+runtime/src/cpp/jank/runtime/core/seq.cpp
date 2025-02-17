@@ -450,46 +450,28 @@ namespace jank::runtime
         }
         else
         {
-          return obj::nil::nil_const();
+          return fallback;
         }
       },
       m);
   }
+  /*
+  {
+    auto const bs(object_behaviors(m));
+    if(bs.is_associatively_readable)
+    {
+      return bs.get_default(m, key, fallback);
+    }
+    else
+    {
+      return fallback;
+    }
+  }
+  */
 
   object_ptr get_in(object_ptr m, object_ptr keys)
   {
-    return visit_object(
-      [&](auto const typed_m) -> object_ptr {
-        using T = typename decltype(typed_m)::value_type;
-
-        if constexpr(behavior::associatively_readable<T>)
-        {
-          return visit_object(
-            [&](auto const typed_keys) -> object_ptr {
-              using T = typename decltype(typed_keys)::value_type;
-
-              if constexpr(behavior::seqable<T>)
-              {
-                object_ptr ret{ typed_m };
-                for(auto seq(typed_keys->fresh_seq()); seq != nullptr; seq = next_in_place(seq))
-                {
-                  ret = get(ret, seq->first());
-                }
-                return ret;
-              }
-              else
-              {
-                throw std::runtime_error{ fmt::format("not seqable: {}", typed_keys->to_string()) };
-              }
-            },
-            keys);
-        }
-        else
-        {
-          return obj::nil::nil_const();
-        }
-      },
-      m);
+    return get_in(m, keys, obj::nil::nil_const());
   }
 
   object_ptr get_in(object_ptr m, object_ptr keys, object_ptr fallback)
@@ -676,41 +658,33 @@ namespace jank::runtime
   object_ptr nth(object_ptr const o, object_ptr const idx, object_ptr const fallback)
   {
     auto const index(to_int(idx));
-    if(index < 0)
+    if(index < 0 || is_nil(o))
     {
       return fallback;
     }
-    else if(o == obj::nil::nil_const())
+
+    auto const bs(object_behaviors(o));
+    if(bs.is_indexable)
     {
-      return o;
+      return bs.nth_default(o, idx, fallback);
     }
-
-    return visit_object(
-      [&](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::indexable<T>)
+    else if(bs.is_seqable)
+    {
+      native_integer i{};
+      // TODO next_in_place / first without visit
+      for(auto it(bs.fresh_seq(o)); it != nullptr && !is_nil(it); it = next_in_place(it), ++i)
+      {
+        if(i == index)
         {
-          return typed_o->nth(idx, fallback);
+          return first(it);
         }
-        else if constexpr(behavior::seqable<T>)
-        {
-          native_integer i{};
-          for(auto it(typed_o->fresh_seq()); it != nullptr; it = next_in_place(it), ++i)
-          {
-            if(i == index)
-            {
-              return it->first();
-            }
-          }
-          return fallback;
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not indexable: {}", object_type_str(o->type)) };
-        }
-      },
-      o);
+      }
+      return fallback;
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not indexable: {}", object_type_str(o->type)) };
+    }
   }
 
   object_ptr peek(object_ptr const o)
