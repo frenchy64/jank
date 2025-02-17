@@ -395,32 +395,28 @@ namespace jank::runtime
 
   object_ptr conj(object_ptr const s, object_ptr const o)
   {
-    return visit_object(
-      [&](auto const typed_s) -> object_ptr {
-        using T = typename decltype(typed_s)::value_type;
-
-        if constexpr(std::same_as<T, obj::nil>)
-        {
-          return make_box<obj::persistent_list>(std::in_place, o);
-        }
-        else if constexpr(behavior::conjable_in_place<T>)
-        {
-          return typed_s->conj_in_place(o);
-        }
-        else if constexpr(behavior::conjable<T>)
-        {
-          return typed_s->conj(o);
-        }
-        else if constexpr(behavior::seqable<T>)
-        {
-          return typed_s->seq()->conj(o);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not seqable: {}", typed_s->to_string()) };
-        }
-      },
-      s);
+    if (is_nil(s))
+    {
+      return make_box<obj::persistent_list>(std::in_place, s);
+    }
+    auto const bs(object_behaviors(s));
+    if (bs.is_conjable_in_place)
+    {
+      return bs.conj_in_place(s, o);
+    }
+    else if (bs.is_conjable)
+    {
+      return bs.conj(s, o);
+    }
+    else if (bs.is_seqable)
+    {
+      // TODO save extra visit?
+      return runtime::conj(bs.seq(s), o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
+    }
   }
 
   object_ptr disj(object_ptr const s, object_ptr const o)
