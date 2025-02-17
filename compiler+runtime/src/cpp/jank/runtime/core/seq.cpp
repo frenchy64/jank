@@ -382,14 +382,15 @@ namespace jank::runtime
 
   object_ptr cons(object_ptr const head, object_ptr const tail)
   {
-    return visit_seqable(
-      [=](auto const typed_tail) -> object_ptr {
-        return make_box<jank::runtime::obj::cons>(head, typed_tail->seq());
-      },
-      [=]() -> object_ptr {
-        throw std::runtime_error{ fmt::format("not seqable: {}", runtime::to_string(tail)) };
-      },
-      tail);
+    auto const bs(object_behaviors(tail));
+    if(bs.is_seqable)
+    {
+      return make_box<jank::runtime::obj::cons>(head, bs.seq(tail));
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(tail)) };
+    }
   }
 
   object_ptr conj(object_ptr const s, object_ptr const o)
