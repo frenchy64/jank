@@ -241,42 +241,22 @@ namespace jank::runtime
 
   obj::persistent_string_ptr subs(object_ptr const s, object_ptr const start)
   {
-    return visit_type<obj::persistent_string>(
-      [](auto const typed_s, native_integer const start) -> obj::persistent_string_ptr {
-        return typed_s->substring(start).expect_ok();
-      },
-      s,
-      to_int(start));
+    return try_object<obj::persistent_string>(s)->substring(to_int(start)).expect_ok();
   }
 
   obj::persistent_string_ptr subs(object_ptr const s, object_ptr const start, object_ptr const end)
   {
-    return visit_type<obj::persistent_string>(
-      [](auto const typed_s, native_integer const start, native_integer const end)
-        -> obj::persistent_string_ptr { return typed_s->substring(start, end).expect_ok(); },
-      s,
-      to_int(start),
-      to_int(end));
+    return try_object<obj::persistent_string>(s)->substring(to_int(start), to_int(end)).expect_ok();
   }
 
   native_integer first_index_of(object_ptr const s, object_ptr const m)
   {
-    return visit_type<obj::persistent_string>(
-      [](auto const typed_s, object_ptr const m) -> native_integer {
-        return typed_s->first_index_of(m);
-      },
-      s,
-      m);
+    return try_object<obj::persistent_string>(s)->first_index_of(m);
   }
 
   native_integer last_index_of(object_ptr const s, object_ptr const m)
   {
-    return visit_type<obj::persistent_string>(
-      [](auto const typed_s, object_ptr const m) -> native_integer {
-        return typed_s->last_index_of(m);
-      },
-      s,
-      m);
+    return try_object<obj::persistent_string>(s)->last_index_of(m);
   }
 
   native_bool is_named(object_ptr const o)
