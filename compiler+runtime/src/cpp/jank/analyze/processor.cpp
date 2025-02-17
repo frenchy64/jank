@@ -1555,11 +1555,19 @@ namespace jank::analyze
     auto const otype(o->type);
     if(otype == runtime::object_type::persistent_list)
     {
-      return analyze_call(expect_object<runtime::obj::persistent_list>(o), current_frame, position, fn_ctx, needs_box);
+      return analyze_call(expect_object<runtime::obj::persistent_list>(o),
+                          current_frame,
+                          position,
+                          fn_ctx,
+                          needs_box);
     }
     else if(otype == runtime::object_type::persistent_vector)
     {
-      return analyze_vector(expect_object<runtime::obj::persistent_vector>(o), current_frame, position, fn_ctx, needs_box);
+      return analyze_vector(expect_object<runtime::obj::persistent_vector>(o),
+                            current_frame,
+                            position,
+                            fn_ctx,
+                            needs_box);
     }
     else if(bs.is_map)
     {
@@ -1569,18 +1577,20 @@ namespace jank::analyze
     {
       return analyze_set(o, current_frame, position, fn_ctx, needs_box);
     }
-    else if(bs.is_number_like
-                      || otype == runtime::object_type::boolean
-                      || otype == runtime::object_type::keyword
-                      || otype == runtime::object_type::nil
-                      || otype == runtime::object_type::persistent_string
-                      || otype == runtime::object_type::character)
+    else if(bs.is_number_like || otype == runtime::object_type::boolean
+            || otype == runtime::object_type::keyword || otype == runtime::object_type::nil
+            || otype == runtime::object_type::persistent_string
+            || otype == runtime::object_type::character)
     {
       return analyze_primitive_literal(o, current_frame, position, fn_ctx, needs_box);
     }
     else if(otype == runtime::object_type::symbol)
     {
-      return analyze_symbol(try_object<runtime::obj::symbol>(o), current_frame, position, fn_ctx, needs_box);
+      return analyze_symbol(try_object<runtime::obj::symbol>(o),
+                            current_frame,
+                            position,
+                            fn_ctx,
+                            needs_box);
     }
     /* This is used when building code from macros; they may end up being other forms of
      * sequences and not just lists. */
@@ -1594,7 +1604,11 @@ namespace jank::analyze
     }
     else if(otype == runtime::object_type::var)
     {
-      return analyze_var_val(try_object<runtime::var>(o), current_frame, position, fn_ctx, needs_box);
+      return analyze_var_val(try_object<runtime::var>(o),
+                             current_frame,
+                             position,
+                             fn_ctx,
+                             needs_box);
     }
     else
     {
