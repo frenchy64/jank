@@ -56,14 +56,13 @@
 #include <jank/runtime/behavior/callable.hpp>
 #include <jank/runtime/behavior/chunkable.hpp>
 #include <jank/runtime/behavior/collection_like.hpp>
-#include <jank/runtime/behavior/conjable.hpp>
 #include <jank/runtime/behavior/countable.hpp>
 #include <jank/runtime/behavior/derefable.hpp>
 #include <jank/runtime/behavior/indexable.hpp>
 #include <jank/runtime/behavior/map_like.hpp>
 #include <jank/runtime/behavior/metadatable.hpp>
 #include <jank/runtime/behavior/nameable.hpp>
-#include <jank/runtime/behavior/seqable.hpp>
+#include <jank/runtime/behavior/number_like.hpp>
 #include <jank/runtime/behavior/sequential.hpp>
 #include <jank/runtime/behavior/set_like.hpp>
 #include <jank/runtime/behavior/stackable.hpp>
@@ -306,6 +305,12 @@ namespace jank::runtime
     if constexpr(behavior::set_like<T>)
     {
       this->is_set = true;
+    }
+    if constexpr(behavior::number_like<T>)
+    {
+      this->is_number_like = true;
+      this->to_integer = [](object_ptr const o) { return try_object<T>(o)->to_integer(); };
+      this->to_real = [](object_ptr const o) { return try_object<T>(o)->to_real(); };
     }
     if constexpr(behavior::set_like<T> || behavior::associatively_readable<T>)
     {

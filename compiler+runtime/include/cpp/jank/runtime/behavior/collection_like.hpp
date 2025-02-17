@@ -1,5 +1,8 @@
 #pragma once
 
+#include <jank/runtime/behavior/seqable.hpp>
+#include <jank/runtime/behavior/conjable.hpp>
+
 namespace jank::runtime::behavior
 {
   /* Collections are types which are seqable, conjable, and countable and which have
