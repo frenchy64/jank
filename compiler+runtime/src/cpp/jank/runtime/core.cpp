@@ -104,7 +104,8 @@ namespace jank::runtime
     return o->type == object_type::symbol && !expect_object<obj::symbol>(o)->ns.empty();
   }
 
-  object_ptr print_helper(object_ptr const args, std::function<void(object_ptr, util::string_builder &)> into_builder)
+  object_ptr print_helper(object_ptr const args,
+                          std::function<void(object_ptr, util::string_builder &)> into_builder)
   {
     if(is_nil(args))
     {
@@ -119,8 +120,7 @@ namespace jank::runtime
     util::string_builder buff;
     into_builder(bs.first(args), buff);
     // TODO next_in_place / first perf
-    for(auto it(bs.next_in_place(args)); it != nullptr;
-        it = object_behaviors(it).next_in_place(it))
+    for(auto it(bs.next_in_place(args)); it != nullptr; it = object_behaviors(it).next_in_place(it))
     {
       buff(' ');
       runtime::to_string(first(it), buff);
@@ -131,7 +131,9 @@ namespace jank::runtime
 
   object_ptr print(object_ptr const args)
   {
-    return print_helper(args, [](object_ptr o, util::string_builder &b) { return runtime::to_string(o, b); });
+    return print_helper(args, [](object_ptr o, util::string_builder &b) {
+      return runtime::to_string(o, b);
+    });
   }
 
   object_ptr println(object_ptr const args)
@@ -143,7 +145,9 @@ namespace jank::runtime
 
   object_ptr pr(object_ptr const args)
   {
-    return print_helper(args, [](object_ptr o, util::string_builder &b) { return runtime::to_code_string(o, b); });
+    return print_helper(args, [](object_ptr o, util::string_builder &b) {
+      return runtime::to_code_string(o, b);
+    });
   }
 
   object_ptr prn(object_ptr const args)
@@ -155,12 +159,15 @@ namespace jank::runtime
 
   native_real to_real(object_ptr const o)
   {
-    return visit_number_like(
-      [](auto const typed_o) -> native_real { return typed_o->to_real(); },
-      [=]() -> native_real {
-        throw std::runtime_error{ fmt::format("not a number: {}", to_string(o)) };
-      },
-      o);
+    auto const bs(object_behaviors(o));
+    if(bs.is_number_like)
+    {
+      return bs.to_real(o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not a number: {}", bs.to_string(o)) };
+    }
   }
 
   native_bool equal(char const lhs, object_ptr const rhs)
