@@ -163,43 +163,30 @@ namespace jank::runtime
 
   object_ptr assoc_in_place(object_ptr const coll, object_ptr const k, object_ptr const v)
   {
-    return visit_object(
-      [](auto const typed_coll, auto const k, auto const v) -> object_ptr {
-        using T = typename decltype(typed_coll)::value_type;
-
-        if constexpr(behavior::associatively_writable_in_place<T>)
-        {
-          return typed_coll->assoc_in_place(k, v);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not associatively_writable_in_place: {}",
-                                                typed_coll->to_string()) };
-        }
-      },
-      coll,
-      k,
-      v);
+    auto const bs(object_behaviors(coll));
+    if (bs.is_associatively_writable_in_place)
+    {
+      return bs.assoc_in_place(coll, k, v);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not associatively_writable_in_place: {}",
+                                            bs.to_string(coll)) };
+    }
   }
 
   object_ptr dissoc_in_place(object_ptr const coll, object_ptr const k)
   {
-    return visit_object(
-      [](auto const typed_coll, auto const k) -> object_ptr {
-        using T = typename decltype(typed_coll)::value_type;
-
-        if constexpr(behavior::associatively_writable_in_place<T>)
-        {
-          return typed_coll->dissoc_in_place(k);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not associatively_writable_in_place: {}",
-                                                typed_coll->to_string()) };
-        }
-      },
-      coll,
-      k);
+    auto const bs(object_behaviors(coll));
+    if(bs.is_associatively_writable_in_place)
+    {
+      return bs.dissoc_in_place(coll, k);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not associatively_writable_in_place: {}",
+                                            bs.to_string(coll)) };
+    }
   }
 
   object_ptr pop_in_place(object_ptr const coll)
