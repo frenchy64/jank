@@ -778,7 +778,8 @@ namespace jank::runtime
         this->get_default = [](object_ptr const m, object_ptr const k, object_ptr const d) {
           return try_object<T>(m)->get(k, d);
         };
-        this->get_entry = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->get_entry(k); };
+        this->get_entry
+          = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->get_entry(k); };
       }
       if constexpr(behavior::associatively_writable_in_place<T>)
       {
@@ -950,7 +951,9 @@ namespace jank::runtime
       {
         this->is_indexable = true;
         this->nth = [](object_ptr const o, object_ptr const i) { return try_object<T>(o)->nth(i); };
-        this->nth_default = [](object_ptr const o, object_ptr const i, object_ptr const d) { return try_object<T>(o)->nth(i, d); };
+        this->nth_default = [](object_ptr const o, object_ptr const i, object_ptr const d) {
+          return try_object<T>(o)->nth(i, d);
+        };
       }
       if constexpr(behavior::map_like<T>)
       {
@@ -962,7 +965,8 @@ namespace jank::runtime
       }
       if constexpr(behavior::set_like<T> || behavior::associatively_readable<T>)
       {
-        this->contains = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->contains(k); };
+        this->contains
+          = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->contains(k); };
       }
       if constexpr(behavior::conjable<T>)
       {
@@ -1025,7 +1029,8 @@ namespace jank::runtime
 
     /* behavior::associatively_readable */
     std::function<object_ptr(object_ptr const m, object_ptr const k)> get{};
-    std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const d)> get_default{};
+    std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const d)>
+      get_default{};
     std::function<object_ptr(object_ptr const m, object_ptr const k)> get_entry{};
 
     /* behavior::associatively_readable || behavior::set_like */
