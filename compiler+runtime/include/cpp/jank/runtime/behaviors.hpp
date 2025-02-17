@@ -9,7 +9,7 @@ namespace jank::runtime
   //   all_behaviors
   //   -> countable_behaviors
   //      -> count
-  // TODO behaviors<T>
+  // TODO behaviors<T> might let us avoid try_object calls
   struct behaviors
   {
     template <typename T>
