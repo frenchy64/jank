@@ -618,48 +618,18 @@ namespace jank::runtime
 
   object_ptr nth(object_ptr const o, object_ptr const idx)
   {
-    auto const index(to_int(idx));
-    if(index < 0)
-    {
-      throw std::runtime_error{ fmt::format("index out of bounds: {}", index) };
-    }
-    else if(o == obj::nil::nil_const())
-    {
-      return o;
-    }
-
-    return visit_object(
-      [&](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::indexable<T>)
-        {
-          return typed_o->nth(idx);
-        }
-        else if constexpr(behavior::seqable<T>)
-        {
-          native_integer i{};
-          for(auto it(typed_o->fresh_seq()); it != nullptr; it = next_in_place(it), ++i)
-          {
-            if(i == index)
-            {
-              return it->first();
-            }
-          }
-          throw std::runtime_error{ fmt::format("index out of bounds: {}", index) };
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not indexable: {}", object_type_str(o->type)) };
-        }
-      },
-      o);
+    return nth(o, idx, obj::nil::nil_const());
   }
 
   object_ptr nth(object_ptr const o, object_ptr const idx, object_ptr const fallback)
   {
+    if(is_nil(o))
+    {
+      return fallback;
+    }
+
     auto const index(to_int(idx));
-    if(index < 0 || is_nil(o))
+    if(index < 0)
     {
       return fallback;
     }
