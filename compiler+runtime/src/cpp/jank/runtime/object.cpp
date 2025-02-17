@@ -1,6 +1,6 @@
 #include <jank/runtime/object.hpp>
 #include <jank/runtime/core.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/hash.hpp>
 
 namespace jank::runtime
@@ -40,9 +40,9 @@ namespace std
     }
     else if(!rhs)
     {
-      return !lhs;
+      return false;
     }
 
-    return visit_object([&](auto const typed_lhs) { return typed_lhs->equal(*rhs); }, lhs);
+    return object_behaviors(lhs).equal(lhs, rhs);
   }
 }
