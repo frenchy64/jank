@@ -767,6 +767,18 @@ namespace jank::runtime
       if constexpr(behavior::associatively_readable<T> && behavior::associatively_writable<T>)
       {
         this->is_associative = true;
+        this->is_associatively_writable = true;
+        this->is_associatively_readable = true;
+        this->assoc = [](object_ptr const m, object_ptr const k, object_ptr const v) { return try_object<T>(m)->assoc(k, v); };
+        this->dissoc = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->dissoc(k); };
+        this->get = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->get(k); };
+        this->get_default = [](object_ptr const m, object_ptr const k, object_ptr const d) { return try_object<T>(m)->get(k, d); };
+      }
+      if constexpr(behavior::associatively_writable_in_place<T>)
+      {
+        this->is_associatively_writable_in_place = true;
+        this->assoc_in_place = [](object_ptr const m, object_ptr const k, object_ptr const v) { return try_object<T>(m)->assoc_in_place(k, v); };
+        this->dissoc_in_place = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->dissoc_in_place(k); };
       }
       if constexpr(behavior::countable<T>)
       {
@@ -932,6 +944,13 @@ namespace jank::runtime
       {
         this->is_set = true;
       }
+      if constexpr(behavior::conjable<T>)
+      {
+        this->is_conjable = true;
+        this->conj = [](object_ptr const o, object_ptr const v) {
+          return try_object<T>(o)->conj(v);
+        };
+      }
       if constexpr(behavior::conjable_in_place<T>)
       {
         this->is_conjable_in_place = true;
@@ -943,10 +962,14 @@ namespace jank::runtime
 
     //native_bool is_list{};
     //native_bool is_sorted{};
-    native_bool is_associative{};
+    native_bool is_associative{}; // redundant?
+    native_bool is_associatively_readable{};
+    native_bool is_associatively_writable{};
+    native_bool is_associatively_writable_in_place{};
     native_bool is_callable{};
     native_bool is_chunk_like{};
     native_bool is_chunkable{};
+    native_bool is_conjable{};
     native_bool is_conjable_in_place{};
     native_bool is_collection{};
     native_bool is_countable{};
@@ -970,6 +993,17 @@ namespace jank::runtime
     std::function<native_persistent_string(object_ptr const)> to_code_string{};
     std::function<native_hash(object_ptr const)> to_hash{};
     std::function<native_bool(object_ptr const, object_ptr const)> equal{};
+
+    /* behavior::associatively_writable_in_place */
+    std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const v)> assoc_in_place{};
+    std::function<object_ptr(object_ptr const m, object_ptr const k)> dissoc_in_place{};
+
+    /* behavior::associatively_writable */
+    std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const v)> assoc{};
+    std::function<object_ptr(object_ptr const m, object_ptr const k)> dissoc{};
+    std::function<object_ptr(object_ptr const m, object_ptr const k)> get{};
+    std::function<object_ptr(object_ptr const m, object_ptr const k, object_ptr const d)> get_default{};
+
 
     /* behavior::sequenceable */
     std::function<object_ptr(object_ptr const)> first{};
@@ -1006,6 +1040,9 @@ namespace jank::runtime
     /* behavior::chunk_like */
     std::function<object_ptr(object_ptr const)> chunk_next{};
     std::function<object_ptr(object_ptr const)> chunk_next_in_place{};
+
+    /* behavior::conjable */
+    std::function<object_ptr(object_ptr const, object_ptr const)> conj{};
 
     /* behavior::conjable_in_place */
     std::function<object_ptr(object_ptr const, object_ptr const)> conj_in_place{};
