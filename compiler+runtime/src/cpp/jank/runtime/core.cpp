@@ -78,7 +78,6 @@ namespace jank::runtime
     return o->type == object_type::var;
   }
 
-
   native_bool is_string(object_ptr const o)
   {
     return o->type == object_type::persistent_string;
