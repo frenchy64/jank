@@ -397,7 +397,7 @@ namespace jank::runtime
   {
     if(is_nil(s))
     {
-      return make_box<obj::persistent_list>(std::in_place, s);
+      return make_box<obj::persistent_list>(std::in_place, o);
     }
     auto const bs(object_behaviors(s));
     if(bs.is_conjable_in_place)
@@ -411,7 +411,7 @@ namespace jank::runtime
     else if(bs.is_seqable)
     {
       // TODO save extra visit?
-      return runtime::conj(bs.seq(s), o);
+      return runtime::conj(bs.seq(s) ?: obj::nil::nil_const(), o);
     }
     else
     {
