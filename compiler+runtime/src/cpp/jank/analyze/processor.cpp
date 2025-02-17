@@ -1267,7 +1267,6 @@ namespace jank::analyze
     native_vector<std::pair<expression_ptr, expression_ptr>> exprs;
     exprs.reserve(bs.count(o));
 
-
     // TODO next_in_place / first perf
     for(auto d = bs.fresh_seq(o); d != nullptr; d = object_behaviors(d).next_in_place(d))
     {
