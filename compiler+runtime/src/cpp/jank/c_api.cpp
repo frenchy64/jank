@@ -5,6 +5,7 @@
 
 #include <jank/c_api.h>
 #include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/context.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/profile/time.hpp>

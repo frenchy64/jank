@@ -3,7 +3,8 @@
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/behavior/callable.hpp>
 #include <jank/runtime/behavior/seqable.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/visit.hpp> //TODO delete once apply is ported
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/util/make_array.hpp>
 

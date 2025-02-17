@@ -14,6 +14,7 @@
 #include <jank/runtime/behavior/map_like.hpp>
 #include <jank/runtime/behavior/set_like.hpp>
 #include <jank/util/scope_exit.hpp>
+#include <jank/runtime/behaviors.hpp>
 
 namespace jank::read::parse
 {

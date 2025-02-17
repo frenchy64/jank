@@ -3,6 +3,7 @@
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/behavior/comparable.hpp>
 #include <jank/runtime/behavior/nameable.hpp>
 #include <jank/runtime/behavior/derefable.hpp>
