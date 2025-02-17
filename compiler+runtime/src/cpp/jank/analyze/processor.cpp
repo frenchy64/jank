@@ -1317,51 +1317,53 @@ namespace jank::analyze
                          option<expr::function_context_ptr> const &fn_ctx,
                          native_bool const)
   {
-    return visit_set_like(
-      [&](auto const typed_o) -> processor::expression_result {
-        native_vector<expression_ptr> exprs;
-        exprs.reserve(typed_o->count());
-        native_bool literal{ true };
-        for(auto d = typed_o->fresh_seq(); d != nullptr; d = next_in_place(d))
-        {
-          auto res(analyze(d->first(), current_frame, expression_position::value, fn_ctx, true));
-          if(res.is_err())
-          {
-            return res.expect_err_move();
-          }
-          exprs.emplace_back(res.expect_ok_move());
-          if(!boost::get<expr::primitive_literal<expression>>(&exprs.back()->data))
-          {
-            literal = false;
-          }
-        }
+    auto const bs(object_behaviors(o));
+    if(!bs.is_set)
+    {
+      return error::internal_analysis_failure("not set-like: " + bs.to_code_string(o));
+    }
+    native_vector<expression_ptr> exprs;
+    exprs.reserve(bs.count(o));
+    native_bool literal{ true };
+    //TODO next_in_place / first perf
+    for(auto d = bs.fresh_seq(o); d != nullptr; d = object_behaviors(d).next_in_place(d))
+    {
+      auto res(analyze(runtime::first(d), current_frame, expression_position::value, fn_ctx, true));
+      if(res.is_err())
+      {
+        return res.expect_err_move();
+      }
+      exprs.emplace_back(res.expect_ok_move());
+      if(!boost::get<expr::primitive_literal<expression>>(&exprs.back()->data))
+      {
+        literal = false;
+      }
+    }
 
-        if(literal)
-        {
-          /* Eval the literal to resolve exprs such as quotes. */
-          auto const pre_eval_expr(make_box<expression>(expr::set<expression>{
-            expression_base{ {}, position, current_frame, true },
-            std::move(exprs),
-            typed_o->meta
-          }));
-          auto const constant(evaluate::eval(pre_eval_expr));
+    if(literal)
+    {
+      /* Eval the literal to resolve exprs such as quotes. */
+      auto const pre_eval_expr(make_box<expression>(expr::set<expression>{
+        expression_base{ {}, position, current_frame, true },
+        std::move(exprs),
+        bs.meta(o)
+      }));
+      auto const constant(evaluate::eval(pre_eval_expr));
 
-          /* TODO: Order lifted constants. Use sub constants during codegen. */
-          current_frame->lift_constant(constant);
+      /* TODO: Order lifted constants. Use sub constants during codegen. */
+      current_frame->lift_constant(constant);
 
-          return make_box<expression>(expr::primitive_literal<expression>{
-            expression_base{ {}, position, current_frame, true },
-            constant
-          });
-        }
+      return make_box<expression>(expr::primitive_literal<expression>{
+        expression_base{ {}, position, current_frame, true },
+        constant
+      });
+    }
 
-        return make_box<expression>(expr::set<expression>{
-          expression_base{ {}, position, current_frame, true },
-          std::move(exprs),
-          typed_o->meta,
-        });
-      },
-      o);
+    return make_box<expression>(expr::set<expression>{
+      expression_base{ {}, position, current_frame, true },
+      std::move(exprs),
+      bs.meta(o)
+    });
   }
 
   processor::expression_result

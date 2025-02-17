@@ -142,6 +142,7 @@ namespace jank::runtime
     if constexpr(behavior::countable<T>)
     {
       this->is_countable = true;
+      this->count = [](object_ptr const o) { return try_object<T>(o)->count(); };
     }
     if constexpr(behavior::transientable<T>)
     {
