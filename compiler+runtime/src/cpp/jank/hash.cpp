@@ -169,7 +169,8 @@ namespace jank::hash
         {
           uint32_t n{};
           uint32_t hash{ 1 };
-          for(auto it(bs.fresh_seq(typed_sequence)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+          for(auto it(bs.fresh_seq(typed_sequence)); it != nullptr;
+              it = object_behaviors(it).next_in_place(it))
           {
             hash = 31 * hash + visit(object_behaviors(it).first(it));
             ++n;
