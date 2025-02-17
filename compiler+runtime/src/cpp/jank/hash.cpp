@@ -1,5 +1,4 @@
 #include <jank/hash.hpp>
-#include <jank/runtime/visit.hpp>
 #include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/core/seq.hpp>
 
