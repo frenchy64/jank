@@ -167,6 +167,7 @@ namespace jank::runtime
       this->is_metadatable = true;
       this->with_meta
         = [](object_ptr const o, object_ptr const m) { return try_object<T>(o)->with_meta(m); };
+      this->meta = [](object_ptr const o) { return try_object<T>(o)->meta; };
       this->get_meta = [](object_ptr const o) {
         return try_object<T>(o)->meta.unwrap_or(obj::nil::nil_const());
       };

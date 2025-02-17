@@ -1,6 +1,7 @@
 #pragma once
 
 #include <jank/runtime/object.hpp>
+#include <jank/option.hpp>
 
 namespace jank::runtime
 {
@@ -95,7 +96,8 @@ namespace jank::runtime
 
     /* behavior::metadatable */
     std::function<object_ptr(object_ptr const, object_ptr const)> with_meta{};
-    std::function<object_ptr(object_ptr const)> get_meta{};
+    std::function<option<object_ptr>(object_ptr const)> meta{};
+    std::function<object_ptr(object_ptr const)> get_meta{}; //convenient, could be a member function
     std::function<object_ptr(object_ptr const, object_ptr const meta_obj)> set_meta{};
 
     /* behavior::transientable */
