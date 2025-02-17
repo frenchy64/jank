@@ -441,7 +441,8 @@ namespace jank::analyze
       {
         auto arity_list_obj(it.first().unwrap());
 
-        auto const err([&]() -> result<void, error_ptr> {
+        auto const err(
+          [&]() -> result<void, error_ptr> {
             auto const bs(object_behaviors(arity_list_obj));
             if(bs.is_sequenceable)
             {
@@ -1040,30 +1041,30 @@ namespace jank::analyze
     {
       auto const item(it->first());
       auto const type([](auto const item) {
-          if(is_nil(item))
-          {
-            return try_expression_type::other;
-          }
+        if(is_nil(item))
+        {
+          return try_expression_type::other;
+        }
 
-          auto const bs(object_behaviors(item));
-          if(!bs.is_seqable)
-          {
-            return try_expression_type::other;
-          }
-          auto const f(first(bs.seq(item)));
-          if(runtime::equal(f, &catch_))
-          {
-            return try_expression_type::catch_;
-          }
-          else if(runtime::equal(f, &finally_))
-          {
-            return try_expression_type::finally_;
-          }
-          else
-          {
-            return try_expression_type::other;
-          }
-        }(item));
+        auto const bs(object_behaviors(item));
+        if(!bs.is_seqable)
+        {
+          return try_expression_type::other;
+        }
+        auto const f(first(bs.seq(item)));
+        if(runtime::equal(f, &catch_))
+        {
+          return try_expression_type::catch_;
+        }
+        else if(runtime::equal(f, &finally_))
+        {
+          return try_expression_type::finally_;
+        }
+        else
+        {
+          return try_expression_type::other;
+        }
+      }(item));
 
       switch(type)
       {
