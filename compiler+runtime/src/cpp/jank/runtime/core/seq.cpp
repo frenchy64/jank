@@ -163,30 +163,43 @@ namespace jank::runtime
 
   object_ptr assoc_in_place(object_ptr const coll, object_ptr const k, object_ptr const v)
   {
-    auto const bs(object_behaviors(coll));
-    if (bs.is_associatively_writable_in_place)
-    {
-      return bs.assoc_in_place(coll, k, v);
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not associatively_writable_in_place: {}",
-                                            bs.to_string(coll)) };
-    }
+    return visit_object(
+      [](auto const typed_coll, auto const k, auto const v) -> object_ptr {
+        using T = typename decltype(typed_coll)::value_type;
+
+        if constexpr(behavior::associatively_writable_in_place<T>)
+        {
+          return typed_coll->assoc_in_place(k, v);
+        }
+        else
+        {
+          throw std::runtime_error{ fmt::format("not associatively_writable_in_place: {}",
+                                                typed_coll->to_string()) };
+        }
+      },
+      coll,
+      k,
+      v);
   }
 
   object_ptr dissoc_in_place(object_ptr const coll, object_ptr const k)
   {
-    auto const bs(object_behaviors(coll));
-    if (bs.is_associatively_writable_in_place)
-    {
-      return bs.dissoc_in_place(coll, k);
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not associatively_writable_in_place: {}",
-                                            bs.to_string(coll)) };
-    }
+    return visit_object(
+      [](auto const typed_coll, auto const k) -> object_ptr {
+        using T = typename decltype(typed_coll)::value_type;
+
+        if constexpr(behavior::associatively_writable_in_place<T>)
+        {
+          return typed_coll->dissoc_in_place(k);
+        }
+        else
+        {
+          throw std::runtime_error{ fmt::format("not associatively_writable_in_place: {}",
+                                                typed_coll->to_string()) };
+        }
+      },
+      coll,
+      k);
   }
 
   object_ptr pop_in_place(object_ptr const coll)
@@ -197,75 +210,90 @@ namespace jank::runtime
 
   object_ptr seq(object_ptr const s)
   {
-    if (is_nil(s))
-    {
-      return s;
-    }
-    auto const bs(object_behaviors(s));
-    if (bs.is_seqable)
-    {
-      auto const ret(bs.seq(s));
-      if(!ret)
-      {
-        return obj::nil::nil_const();
-      }
+    return visit_object(
+      [](auto const typed_s) -> object_ptr {
+        using T = typename decltype(typed_s)::value_type;
 
-      return ret;
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
-    }
+        if constexpr(std::same_as<T, obj::nil>)
+        {
+          return typed_s;
+        }
+        else if constexpr(behavior::seqable<T>)
+        {
+          auto const ret(typed_s->seq());
+          if(!ret)
+          {
+            return obj::nil::nil_const();
+          }
+
+          return ret;
+        }
+        else
+        {
+          throw std::runtime_error{ fmt::format("not seqable: {}", typed_s->to_string()) };
+        }
+      },
+      s);
   }
 
   object_ptr fresh_seq(object_ptr const s)
   {
-    if (is_nil(s))
-    {
-      return s;
-    }
-    auto const bs(object_behaviors(s));
-    if (bs.is_seqable)
-    {
-      auto const ret(bs.fresh_seq(s));
-      if(!ret)
-      {
-        return obj::nil::nil_const();
-      }
+    return visit_object(
+      [](auto const typed_s) -> object_ptr {
+        using T = typename decltype(typed_s)::value_type;
 
-      return ret;
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
-    }
+        if constexpr(std::same_as<T, obj::nil>)
+        {
+          return typed_s;
+        }
+        else if constexpr(behavior::seqable<T>)
+        {
+          auto const ret(typed_s->fresh_seq());
+          if(!ret)
+          {
+            return obj::nil::nil_const();
+          }
+
+          return ret;
+        }
+        else
+        {
+          throw std::runtime_error{ fmt::format("not seqable: {}", typed_s->to_string()) };
+        }
+      },
+      s);
   }
 
   object_ptr first(object_ptr const s)
   {
-    if (is_nil(s))
-    {
-      return s;
-    }
-    auto const bs(object_behaviors(s));
-    if (bs.is_sequenceable)
-    {
-      return bs.first(s);
-    }
-    else if (bs.is_seqable)
-    {
-      auto const ret(bs.seq(s));
-      if(!ret)
-      {
-        return obj::nil::nil_const();
-      }
+    return visit_object(
+      [](auto const typed_s) -> object_ptr {
+        using T = typename decltype(typed_s)::value_type;
 
-      return runtime::first(ret);
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
-    }
+        if constexpr(std::same_as<T, obj::nil>)
+        {
+          return typed_s;
+        }
+        else if constexpr(behavior::sequenceable<T>)
+        {
+          return typed_s->first();
+        }
+        else if constexpr(behavior::seqable<T>)
+        {
+          auto const ret(typed_s->seq());
+          if(!ret)
+          {
+            return obj::nil::nil_const();
+          }
+
+          return ret->first();
+        }
+        else
+        {
+          throw std::runtime_error{ fmt::format("not seqable: {}", typed_s->to_string()) };
+        }
+      },
+      s);
   }
 
   object_ptr second(object_ptr const s)
@@ -275,60 +303,70 @@ namespace jank::runtime
 
   object_ptr next(object_ptr const s)
   {
-    if (is_nil(s))
-    {
-      return s;
-    }
-    auto const bs(object_behaviors(s));
-    if (bs.is_sequenceable)
-    {
-      return bs.next(s) ?: obj::nil::nil_const();
-    }
-    else if (bs.is_seqable)
-    {
-      auto const seq(bs.seq(s));
-      if(!seq)
-      {
-        return obj::nil::nil_const();
-      }
+    return visit_object(
+      [](auto const typed_s) -> object_ptr {
+        using T = typename decltype(typed_s)::value_type;
 
-      return runtime::next(seq) ?: obj::nil::nil_const();
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
-    }
+        if constexpr(std::same_as<T, obj::nil>)
+        {
+          return typed_s;
+        }
+        else if constexpr(behavior::sequenceable<T>)
+        {
+          return typed_s->next() ?: obj::nil::nil_const();
+        }
+        else if constexpr(behavior::seqable<T>)
+        {
+          auto const s(typed_s->seq());
+          if(!s)
+          {
+            return obj::nil::nil_const();
+          }
+
+          return s->next() ?: obj::nil::nil_const();
+        }
+        else
+        {
+          throw std::runtime_error{ fmt::format("not seqable: {}", typed_s->to_string()) };
+        }
+      },
+      s);
   }
 
   object_ptr next_in_place(object_ptr const s)
   {
-    if (is_nil(s))
-    {
-      return s;
-    }
-    auto const bs(object_behaviors(s));
-    if (bs.is_sequenceable_in_place)
-    {
-      return bs.next_in_place(s) ?: obj::nil::nil_const();
-    }
-    else if (bs.is_sequenceable)
-    {
-      return bs.next(s) ?: obj::nil::nil_const();
-    }
-    else if (bs.is_seqable)
-    {
-      auto const ret(bs.seq(s));
-      if(!ret)
-      {
-        return obj::nil::nil_const();
-      }
+    return visit_object(
+      [](auto const typed_s) -> object_ptr {
+        using T = typename decltype(typed_s)::value_type;
 
-      return runtime::next_in_place(ret) ?: obj::nil::nil_const();
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
-    }
+        if constexpr(std::same_as<T, obj::nil>)
+        {
+          return typed_s;
+        }
+        else if constexpr(behavior::sequenceable_in_place<T>)
+        {
+          return typed_s->next_in_place() ?: obj::nil::nil_const();
+        }
+        else if constexpr(behavior::sequenceable<T>)
+        {
+          return typed_s->next() ?: obj::nil::nil_const();
+        }
+        else if constexpr(behavior::seqable<T>)
+        {
+          auto const ret(typed_s->seq());
+          if(!ret)
+          {
+            return obj::nil::nil_const();
+          }
+
+          return next_in_place(ret) ?: obj::nil::nil_const();
+        }
+        else
+        {
+          throw std::runtime_error{ fmt::format("not seqable: {}", typed_s->to_string()) };
+        }
+      },
+      s);
   }
 
   object_ptr rest(object_ptr const s)
@@ -337,58 +375,63 @@ namespace jank::runtime
     {
       return obj::persistent_list::empty();
     }
-    auto const bs(object_behaviors(s));
-    auto const seq(bs.seq(s));
-    if(!seq)
-    {
-      return obj::persistent_list::empty();
-    }
-    //TODO specialize is_sequenceable case to save visit (like next above)
-    auto const ret(runtime::next(s));
-    if(ret == nullptr)
-    {
-      return obj::persistent_list::empty();
-    }
-    return ret;
+    return visit_seqable(
+      [=](auto const typed_s) -> object_ptr {
+        auto const seq(typed_s->seq());
+        if(!seq)
+        {
+          return obj::persistent_list::empty();
+        }
+        auto const ret(seq->next());
+        if(ret == nullptr)
+        {
+          return obj::persistent_list::empty();
+        }
+        return ret;
+      },
+      s);
   }
 
   object_ptr cons(object_ptr const head, object_ptr const tail)
   {
-    auto const bs(object_behaviors(tail));
-    if(bs.is_seqable)
-    {
-      return make_box<jank::runtime::obj::cons>(head, bs.seq(tail));
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(tail)) };
-    }
+    return visit_seqable(
+      [=](auto const typed_tail) -> object_ptr {
+        return make_box<jank::runtime::obj::cons>(head, typed_tail->seq());
+      },
+      [=]() -> object_ptr {
+        throw std::runtime_error{ fmt::format("not seqable: {}", runtime::to_string(tail)) };
+      },
+      tail);
   }
 
   object_ptr conj(object_ptr const s, object_ptr const o)
   {
-    if (is_nil(s))
-    {
-      return make_box<obj::persistent_list>(std::in_place, s);
-    }
-    auto const bs(object_behaviors(s));
-    if (bs.is_conjable_in_place)
-    {
-      return bs.conj_in_place(s, o);
-    }
-    else if (bs.is_conjable)
-    {
-      return bs.conj(s, o);
-    }
-    else if (bs.is_seqable)
-    {
-      // TODO save extra visit?
-      return runtime::conj(bs.seq(s), o);
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
-    }
+    return visit_object(
+      [&](auto const typed_s) -> object_ptr {
+        using T = typename decltype(typed_s)::value_type;
+
+        if constexpr(std::same_as<T, obj::nil>)
+        {
+          return make_box<obj::persistent_list>(std::in_place, o);
+        }
+        else if constexpr(behavior::conjable_in_place<T>)
+        {
+          return typed_s->conj_in_place(o);
+        }
+        else if constexpr(behavior::conjable<T>)
+        {
+          return typed_s->conj(o);
+        }
+        else if constexpr(behavior::seqable<T>)
+        {
+          return typed_s->seq()->conj(o);
+        }
+        else
+        {
+          throw std::runtime_error{ fmt::format("not seqable: {}", typed_s->to_string()) };
+        }
+      },
+      s);
   }
 
   object_ptr disj(object_ptr const s, object_ptr const o)
@@ -410,98 +453,161 @@ namespace jank::runtime
 
   object_ptr assoc(object_ptr const m, object_ptr const k, object_ptr const v)
   {
-    auto const bs(object_behaviors(m));
-    if (bs.is_associatively_writable_in_place)
-    {
-      return bs.assoc_in_place(m, k, v);
-    }
-    else if (bs.is_associatively_writable)
-    {
-      return bs.assoc(m, k, v);
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not associatively writable: {}",
-                                            bs.to_string(m)) };
-    }
+    return visit_object(
+      [&](auto const typed_m) -> object_ptr {
+        using T = typename decltype(typed_m)::value_type;
+
+        if constexpr(behavior::associatively_writable_in_place<T>)
+        {
+          return typed_m->assoc_in_place(k, v);
+        }
+        else if constexpr(behavior::associatively_writable<T>)
+        {
+          return typed_m->assoc(k, v);
+        }
+        else
+        {
+          throw std::runtime_error{ fmt::format("not associatively writable: {}",
+                                                typed_m->to_string()) };
+        }
+      },
+      m);
   }
 
   object_ptr dissoc(object_ptr const m, object_ptr const k)
   {
-    auto const bs(object_behaviors(m));
-    if (bs.is_associatively_writable_in_place)
-    {
-      return bs.dissoc_in_place(m, k);
-    }
-    else if (bs.is_associatively_writable)
-    {
-      return bs.dissoc(m, k);
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not associatively writable: {}",
-                                            bs.to_string(m)) };
-    }
+    return visit_object(
+      [&](auto const typed_m) -> object_ptr {
+        using T = typename decltype(typed_m)::value_type;
+
+        if constexpr(behavior::associatively_writable_in_place<T>)
+        {
+          return typed_m->dissoc_in_place(k);
+        }
+        else if constexpr(behavior::associatively_writable<T>)
+        {
+          return typed_m->dissoc(k);
+        }
+        else
+        {
+          throw std::runtime_error{ fmt::format("not associatively writable: {}",
+                                                typed_m->to_string()) };
+        }
+      },
+      m);
   }
 
   object_ptr get(object_ptr const m, object_ptr const key)
   {
-    return get(m, key, obj::nil::nil_const());
+    return visit_object(
+      [&](auto const typed_m) -> object_ptr {
+        using T = typename decltype(typed_m)::value_type;
+
+        if constexpr(behavior::associatively_readable<T>)
+        {
+          return typed_m->get(key);
+        }
+        else
+        {
+          return obj::nil::nil_const();
+        }
+      },
+      m);
   }
 
   object_ptr get(object_ptr const m, object_ptr const key, object_ptr const fallback)
   {
-    auto const bs(object_behaviors(m));
-    if (bs.is_associatively_readable)
-    {
-      return bs.get_default(m, key, fallback);
-    }
-    else
-    {
-      // TODO https://github.com/jank-lang/jank/issues/273
-      return obj::nil::nil_const();
-    }
+    return visit_object(
+      [&](auto const typed_m) -> object_ptr {
+        using T = typename decltype(typed_m)::value_type;
+
+        if constexpr(behavior::associatively_readable<T>)
+        {
+          return typed_m->get(key, fallback);
+        }
+        else
+        {
+          return obj::nil::nil_const();
+        }
+      },
+      m);
   }
 
   object_ptr get_in(object_ptr m, object_ptr keys)
   {
-    return get_in(m, keys, obj::nil::nil_const());
+    return visit_object(
+      [&](auto const typed_m) -> object_ptr {
+        using T = typename decltype(typed_m)::value_type;
+
+        if constexpr(behavior::associatively_readable<T>)
+        {
+          return visit_object(
+            [&](auto const typed_keys) -> object_ptr {
+              using T = typename decltype(typed_keys)::value_type;
+
+              if constexpr(behavior::seqable<T>)
+              {
+                object_ptr ret{ typed_m };
+                for(auto seq(typed_keys->fresh_seq()); seq != nullptr; seq = next_in_place(seq))
+                {
+                  ret = get(ret, seq->first());
+                }
+                return ret;
+              }
+              else
+              {
+                throw std::runtime_error{ fmt::format("not seqable: {}", typed_keys->to_string()) };
+              }
+            },
+            keys);
+        }
+        else
+        {
+          return obj::nil::nil_const();
+        }
+      },
+      m);
   }
 
-  //TODO: algorithm seems different to Clojure, investigate
   object_ptr get_in(object_ptr m, object_ptr keys, object_ptr fallback)
   {
-    auto const m_bs(object_behaviors(m));
-    if (m_bs.is_associatively_readable)
-    {
-      auto const keys_bs(object_behaviors(keys));
-      if(keys_bs.is_seqable)
-      {
-        object_ptr ret{ m };
-        //TODO next_in_place
-        for(auto seq(keys_bs.fresh_seq(keys)); seq != nullptr; seq = runtime::next_in_place(seq))
-        {
-          //TODO should use sentinel here. looks wrong but I can't break it.
-          //TODO first
-          ret = get(ret, runtime::first(seq));
-        }
+    return visit_object(
+      [&](auto const typed_m) -> object_ptr {
+        using T = typename decltype(typed_m)::value_type;
 
-        if(ret == obj::nil::nil_const())
+        if constexpr(behavior::associatively_readable<T>)
         {
-          return fallback;
+          return visit_object(
+            [&](auto const typed_keys) -> object_ptr {
+              using T = typename decltype(typed_keys)::value_type;
+
+              if constexpr(behavior::seqable<T>)
+              {
+                object_ptr ret{ typed_m };
+                for(auto seq(typed_keys->fresh_seq()); seq != nullptr; seq = next_in_place(seq))
+                {
+                  ret = get(ret, seq->first());
+                }
+
+                if(ret == obj::nil::nil_const())
+                {
+                  return fallback;
+                }
+                return ret;
+              }
+              else
+              {
+                throw std::runtime_error{ fmt::format("not seqable: {}", typed_keys->to_string()) };
+              }
+            },
+            keys);
         }
-        return ret;
-      }
-      else
-      {
-        throw std::runtime_error{ fmt::format("not seqable: {}", keys_bs.to_string(keys)) };
-      }
-    }
-    else
-    {
-      //Clojure returns m
-      return obj::nil::nil_const();
-    }
+        else
+        {
+          return obj::nil::nil_const();
+        }
+      },
+      m);
   }
 
   object_ptr find(object_ptr const s, object_ptr const key)
