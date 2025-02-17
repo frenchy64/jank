@@ -129,33 +129,31 @@ namespace jank::runtime
 
   object_ptr println(object_ptr const args)
   {
-    visit_object(
-      [](auto const typed_more) {
-        using T = typename decltype(typed_more)::value_type;
+    if(is_nil(args))
+    {
+      std::putc('\n', stdout);
+      return obj::nil::nil_const();
+    }
 
-        if constexpr(std::same_as<T, obj::nil>)
-        {
-          std::putc('\n', stdout);
-        }
-        else if constexpr(behavior::sequenceable<T>)
-        {
-          util::string_builder buff;
-          runtime::to_string(typed_more->first(), buff);
-          for(auto it(next_in_place(typed_more)); it != nullptr; it = next_in_place(it))
-          {
-            buff(' ');
-            runtime::to_string(it->first(), buff);
-          }
-          std::fwrite(buff.data(), 1, buff.size(), stdout);
-          std::putc('\n', stdout);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("expected a sequence: {}",
-                                                typed_more->to_string()) };
-        }
-      },
-      args);
+    auto const bs(object_behaviors(args));
+    if(bs.is_sequenceable)
+    {
+      util::string_builder buff;
+      runtime::to_string(bs.first(args), buff);
+      // TODO next_in_place / first perf
+      for(auto it(bs.next_in_place(args)); it != nullptr;
+          it = object_behaviors(it).next_in_place(it))
+      {
+        buff(' ');
+        runtime::to_string(first(it), buff);
+      }
+      std::fwrite(buff.data(), 1, buff.size(), stdout);
+      std::putc('\n', stdout);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("expected a sequence: {}", bs.to_string(args)) };
+    }
     return obj::nil::nil_const();
   }
 
