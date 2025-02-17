@@ -451,25 +451,15 @@ namespace jank::runtime
 
   object_ptr dissoc(object_ptr const m, object_ptr const k)
   {
-    return visit_object(
-      [&](auto const typed_m) -> object_ptr {
-        using T = typename decltype(typed_m)::value_type;
-
-        if constexpr(behavior::associatively_writable_in_place<T>)
-        {
-          return typed_m->dissoc_in_place(k);
-        }
-        else if constexpr(behavior::associatively_writable<T>)
-        {
-          return typed_m->dissoc(k);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not associatively writable: {}",
-                                                typed_m->to_string()) };
-        }
-      },
-      m);
+    auto const bs(object_behaviors(m));
+    if(bs.is_associatively_writable)
+    {
+      return bs.dissoc(m, k);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not associatively writable: {}", bs.to_string(m)) };
+    }
   }
 
   object_ptr get(object_ptr const m, object_ptr const key)
