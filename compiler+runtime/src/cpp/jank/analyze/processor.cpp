@@ -3,13 +3,15 @@
 #include <fmt/core.h>
 
 #include <jank/native_persistent_string/fmt.hpp>
-#include <jank/runtime/visit.hpp>
 #include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/behavior/callable.hpp>
+#include <jank/runtime/obj/persistent_vector.hpp>
+#include <jank/runtime/obj/persistent_hash_map.hpp>
+#include <jank/runtime/obj/persistent_list_sequence.hpp>
+#include <jank/runtime/obj/persistent_vector_sequence.hpp>
+#include <jank/runtime/obj/keyword.hpp>
+#include <jank/runtime/rtti.hpp>
 #include <jank/runtime/context.hpp>
-#include <jank/runtime/behavior/number_like.hpp>
-#include <jank/runtime/behavior/sequential.hpp>
-#include <jank/runtime/behavior/map_like.hpp>
-#include <jank/runtime/behavior/set_like.hpp>
 #include <jank/runtime/core/truthy.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/analyze/processor.hpp>
@@ -1036,7 +1038,9 @@ namespace jank::analyze
     static runtime::obj::symbol catch_{ "catch" }, finally_{ "finally" };
     native_bool has_catch{}, has_finally{};
 
-    for(auto it(next_in_place(list->fresh_seq())); it != nullptr; it = next_in_place(it))
+    auto init(list->fresh_seq());
+    for(auto it(init == nullptr ? init : init->next_in_place()); it != nullptr;
+        it = it->next_in_place())
     {
       auto const item(it->first());
       auto const type([](auto const item) {
@@ -1215,7 +1219,7 @@ namespace jank::analyze
     native_vector<expression_ptr> exprs;
     exprs.reserve(o->count());
     native_bool literal{ true };
-    for(auto d = o->fresh_seq(); d != nullptr; d = next_in_place(d))
+    for(auto d = o->fresh_seq(); d != nullptr; d = d->next_in_place())
     {
       auto res(analyze(d->first(), current_frame, expression_position::value, fn_ctx, true));
       if(res.is_err())
