@@ -343,35 +343,24 @@ namespace jank::runtime
 
   native_bool is_named(object_ptr const o)
   {
-    return visit_object(
-      [](auto const typed_o) {
-        using T = typename decltype(typed_o)::value_type;
-
-        return behavior::nameable<T>;
-      },
-      o);
+    return object_behaviors(o).is_named;
   }
 
   native_persistent_string name(object_ptr const o)
   {
-    return visit_object(
-      [](auto const typed_o) -> native_persistent_string {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(std::same_as<T, obj::persistent_string>)
-        {
-          return typed_o->data;
-        }
-        else if constexpr(behavior::nameable<T>)
-        {
-          return typed_o->get_name();
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not nameable: {}", typed_o->to_string()) };
-        }
-      },
-      o);
+    auto const bs(object_behaviors(o));
+    if(o->type == object_type::persistent_string)
+    {
+      return bs.to_string(o);
+    }
+    else if(bs.is_named)
+    {
+      return bs.get_name(o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not nameable: {}", bs.to_string(o)) };
+    }
   }
 
   object_ptr namespace_(object_ptr const o)
