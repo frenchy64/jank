@@ -441,29 +441,28 @@ namespace jank::analyze
       {
         auto arity_list_obj(it.first().unwrap());
 
-        auto const err(
-          [&]() -> result<void, error_ptr> {
-            auto const bs(object_behaviors(arity_list_obj));
-            if(bs.is_sequenceable)
-            {
-              auto arity_list(runtime::obj::persistent_list::create(arity_list_obj));
+        auto const err([&]() -> result<void, error_ptr> {
+          auto const bs(object_behaviors(arity_list_obj));
+          if(bs.is_sequenceable)
+          {
+            auto arity_list(runtime::obj::persistent_list::create(arity_list_obj));
 
-              auto result(analyze_fn_arity(arity_list.data, name, current_frame));
-              if(result.is_err())
-              {
-                return result.expect_err_move();
-              }
-              arities.emplace_back(result.expect_ok_move());
-              return ok();
-            }
-            else
+            auto result(analyze_fn_arity(arity_list.data, name, current_frame));
+            if(result.is_err())
             {
-              return error::analysis_invalid_fn(
-                "Invalid 'fn' syntax. Please provide either a list of arities or a "
-                "parameter vector",
-                meta_source(list));
+              return result.expect_err_move();
             }
-          }());
+            arities.emplace_back(result.expect_ok_move());
+            return ok();
+          }
+          else
+          {
+            return error::analysis_invalid_fn(
+              "Invalid 'fn' syntax. Please provide either a list of arities or a "
+              "parameter vector",
+              meta_source(list));
+          }
+        }());
 
         if(err.is_err())
         {
