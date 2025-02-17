@@ -86,7 +86,7 @@ namespace jank::runtime
   native_bool is_map(object_ptr o);
   native_bool is_associative(object_ptr o);
   native_bool is_set(object_ptr o);
-  native_bool is_counter(object_ptr o);
+  native_bool is_countable(object_ptr o);
   native_bool is_transientable(object_ptr o);
   native_bool is_sorted(object_ptr o);
 

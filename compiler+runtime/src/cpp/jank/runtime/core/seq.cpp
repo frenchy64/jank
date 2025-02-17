@@ -24,40 +24,29 @@ namespace jank::runtime
 {
   native_bool is_empty(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> native_bool {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(std::same_as<T, obj::nil>)
-        {
-          return true;
-        }
-        else if constexpr(behavior::seqable<T>)
-        {
-          return typed_o->seq() == nullptr;
-        }
-        else if constexpr(behavior::countable<T>)
-        {
-          return typed_o->count() == 0;
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("cannot check if this is empty: {}",
-                                                typed_o->to_string()) };
-        }
-      },
-      o);
+    if(is_nil(o))
+    {
+      return true;
+    }
+    auto const bs(object_behaviors(o));
+    if (bs.is_seqable)
+    {
+      return bs.seq(o) == nullptr;
+    }
+    else if (bs.is_countable)
+    {
+      return bs.count(o) == 0;
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("cannot check if this is empty: {}",
+                                            bs.to_string(o)) };
+    }
   }
 
   native_bool is_seq(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> native_bool {
-        using T = typename decltype(typed_o)::value_type;
-
-        return behavior::sequenceable<T>;
-      },
-      o);
+    return object_behaviors(o).is_sequenceable;
   }
 
   native_bool is_seqable(object_ptr const o)
@@ -102,9 +91,9 @@ namespace jank::runtime
     return object_behaviors(o).is_set;
   }
 
-  native_bool is_counter(object_ptr const o)
+  native_bool is_countable(object_ptr const o)
   {
-    return object_behaviors(o).is_counter;
+    return object_behaviors(o).is_countable;
   }
 
   native_bool is_transientable(object_ptr const o)
@@ -146,22 +135,16 @@ namespace jank::runtime
 
   object_ptr conj_in_place(object_ptr const coll, object_ptr const o)
   {
-    return visit_object(
-      [](auto const typed_coll, auto const o) -> object_ptr {
-        using T = typename decltype(typed_coll)::value_type;
-
-        if constexpr(behavior::conjable_in_place<T>)
-        {
-          return typed_coll->conj_in_place(o);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not conjable_in_place: {}",
-                                                typed_coll->to_string()) };
-        }
-      },
-      coll,
-      o);
+    auto const bs(object_behaviors(coll));
+    if(bs.is_conjable_in_place)
+    {
+      return bs.conj_in_place(coll, o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not conjable_in_place: {}",
+                                            bs.to_string(coll)) };
+    }
   }
 
   object_ptr disj_in_place(object_ptr const coll, object_ptr const o)

@@ -722,6 +722,9 @@ namespace jank::runtime
   }
 
   // TODO try splitting up
+  //   all_behaviors
+  //   -> countable_behaviors
+  //      -> count
   // TODO behaviors<T>
   struct behaviors
   {
@@ -764,7 +767,7 @@ namespace jank::runtime
       }
       if constexpr(behavior::countable<T>)
       {
-        this->is_counter = true;
+        this->is_countable = true;
       }
       if constexpr(behavior::transientable<T>)
       {
@@ -875,7 +878,7 @@ namespace jank::runtime
     native_bool is_chunkable{};
     native_bool is_conjable_in_place{};
     native_bool is_collection{};
-    native_bool is_counter{};
+    native_bool is_countable{};
     native_bool is_derefable{};
     native_bool is_function_like{};
     native_bool is_map{};
@@ -900,6 +903,9 @@ namespace jank::runtime
     /* behavior::sequenceable */
     std::function<object_ptr(object_ptr const)> first{};
     std::function<object_ptr(object_ptr const)> next{};
+
+    /* behavior::countable */
+    std::function<object_ptr(object_ptr const)> count{};
 
     /* behavior::sequenceable_in_place */
     std::function<object_ptr(object_ptr const)> next_in_place{};
