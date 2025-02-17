@@ -395,20 +395,20 @@ namespace jank::runtime
 
   object_ptr conj(object_ptr const s, object_ptr const o)
   {
-    if (is_nil(s))
+    if(is_nil(s))
     {
       return make_box<obj::persistent_list>(std::in_place, s);
     }
     auto const bs(object_behaviors(s));
-    if (bs.is_conjable_in_place)
+    if(bs.is_conjable_in_place)
     {
       return bs.conj_in_place(s, o);
     }
-    else if (bs.is_conjable)
+    else if(bs.is_conjable)
     {
       return bs.conj(s, o);
     }
-    else if (bs.is_seqable)
+    else if(bs.is_seqable)
     {
       // TODO save extra visit?
       return runtime::conj(bs.seq(s), o);
