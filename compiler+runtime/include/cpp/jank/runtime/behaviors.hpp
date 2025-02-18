@@ -41,6 +41,7 @@ namespace jank::runtime
     native_bool is_sequenceable_in_place{};
     native_bool is_sequenceable{};
     native_bool is_set{};
+    native_bool is_stackable{};
     native_bool is_number_like{};
     native_bool is_transientable{};
     native_bool is_persistentable{};
@@ -95,6 +96,10 @@ namespace jank::runtime
     /* behavior::nameable */
     std::function<native_persistent_string(object_ptr const)> get_name{};
     std::function<native_persistent_string(object_ptr const)> get_namespace{};
+
+    /* behavior::stackable */
+    std::function<object_ptr(object_ptr const)> peek{};
+    std::function<object_ptr(object_ptr const)> pop{};
 
     /* behavior::seqable */
     std::function<object_ptr(object_ptr const)> seq{};

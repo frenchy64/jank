@@ -626,20 +626,15 @@ namespace jank::runtime
       return o;
     }
 
-    return visit_object(
-      [&](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::stackable<T>)
-        {
-          return typed_o->peek();
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not stackable: {}", object_type_str(o->type)) };
-        }
-      },
-      o);
+    auto const bs(object_behaviors(o));
+    if(bs.is_stackable)
+    {
+      return bs.peek(o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not stackable: {}", object_type_str(o->type)) };
+    }
   }
 
   object_ptr pop(object_ptr const o)
@@ -649,20 +644,15 @@ namespace jank::runtime
       return o;
     }
 
-    return visit_object(
-      [&](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::stackable<T>)
-        {
-          return typed_o->pop();
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not stackable: {}", object_type_str(o->type)) };
-        }
-      },
-      o);
+    auto const bs(object_behaviors(o));
+    if(bs.is_stackable)
+    {
+      return bs.pop(o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not stackable: {}", object_type_str(o->type)) };
+    }
   }
 
   object_ptr empty(object_ptr const o)

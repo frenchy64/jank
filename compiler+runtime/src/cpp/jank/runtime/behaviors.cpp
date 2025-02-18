@@ -318,6 +318,12 @@ namespace jank::runtime
     {
       this->is_set = true;
     }
+    if constexpr(behavior::stackable<T>)
+    {
+      this->is_stackable = true;
+      this->peek = [](object_ptr const o) { return try_object<T>(o)->peek(); };
+      this->pop = [](object_ptr const o) { return try_object<T>(o)->pop(); };
+    }
     if constexpr(behavior::number_like<T>)
     {
       this->is_number_like = true;
