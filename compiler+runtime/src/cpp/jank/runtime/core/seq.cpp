@@ -675,23 +675,26 @@ namespace jank::runtime
 
   native_persistent_string str(object_ptr const o, object_ptr const args)
   {
-    return visit_seqable(
-      [=](auto const typed_args) -> native_persistent_string {
-        util::string_builder buff;
-        buff.reserve(16);
-        runtime::to_string(o, buff);
-        if(0 < sequence_length(typed_args))
-        {
-          auto const fresh(typed_args->fresh_seq());
-          runtime::to_string(fresh->first(), buff);
-          for(auto it(fresh->next_in_place()); it != nullptr; it = it->next_in_place())
-          {
-            runtime::to_string(it->first(), buff);
-          }
-        }
-        return buff.release();
-      },
-      args);
+    auto const bs(object_behaviors(args));
+    if(!bs.is_seqable)
+    {
+      throw std::runtime_error{ "not seqable: " + bs.to_code_string(args) };
+    }
+    util::string_builder buff;
+    buff.reserve(16);
+    runtime::to_string(o, buff);
+    //TODO next_in_place / first perf
+    if(0 < sequence_length(args))
+    {
+      auto const fresh(bs.fresh_seq(args));
+      runtime::to_string(object_behaviors(fresh).first(fresh), buff);
+      for(auto it(object_behaviors(fresh).next_in_place(fresh)); it != nullptr;
+          it = object_behaviors(it).next_in_place(it))
+      {
+        runtime::to_string(object_behaviors(it).first(it), buff);
+      }
+    }
+    return buff.release();
   }
 
   obj::persistent_list_ptr list(object_ptr const s)
