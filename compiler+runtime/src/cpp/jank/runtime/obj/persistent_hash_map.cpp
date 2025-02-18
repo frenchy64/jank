@@ -5,7 +5,7 @@
 #include <jank/runtime/obj/persistent_vector.hpp>
 #include <jank/runtime/obj/transient_hash_map.hpp>
 #include <jank/runtime/behavior/seqable.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/core/seq.hpp>
 
 namespace jank::runtime::obj
@@ -49,27 +49,29 @@ namespace jank::runtime::obj
 
   persistent_hash_map_ptr persistent_hash_map::create_from_seq(object_ptr const seq)
   {
-    return make_box<persistent_hash_map>(visit_seqable(
-      [](auto const typed_seq) -> persistent_hash_map::value_type {
-        runtime::detail::native_transient_hash_map transient;
-        for(auto it(typed_seq->fresh_seq()); it != nullptr; it = runtime::next_in_place(it))
-        {
-          auto const key(it->first());
-          it = runtime::next_in_place(it);
-          if(!it)
-          {
-            throw std::runtime_error{ fmt::format("Odd number of elements: {}",
-                                                  typed_seq->to_string()) };
-          }
-          auto const val(it->first());
-          transient.set(key, val);
-        }
-        return transient.persistent();
-      },
-      [=]() -> persistent_hash_map::value_type {
-        throw std::runtime_error{ fmt::format("Not seqable: {}", runtime::to_string(seq)) };
-      },
-      seq));
+    auto const bs(object_behaviors(seq));
+    if(!bs.is_seqable)
+    {
+      throw std::runtime_error{ fmt::format("Not seqable: {}", bs.to_string(seq)) };
+    }
+
+    runtime::detail::native_transient_hash_map transient;
+    // TODO next_in_place / first perf
+    for(auto it(bs.fresh_seq(seq)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    {
+      auto const it_bs(object_behaviors(it));
+      auto const key(it_bs.first(it));
+      it = it_bs.next_in_place(it);
+      if(!it)
+      {
+        throw std::runtime_error{ fmt::format("Odd number of elements: {}",
+                                              bs.to_string(seq)) };
+      }
+      // TODO not confident using it_bs.first here..
+      auto const val(runtime::first(it));
+      transient.set(key, val);
+    }
+    return make_box<persistent_hash_map>(transient.persistent());
   }
 
   object_ptr persistent_hash_map::get(object_ptr const key) const
