@@ -2,6 +2,7 @@
 
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/obj/chunked_cons.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/visit.hpp>
 #include <jank/runtime/core/make_box.hpp>
 #include <jank/runtime/core/seq.hpp>
@@ -37,21 +38,17 @@ namespace jank::runtime::obj
 
   object_ptr chunked_cons::first() const
   {
-    return visit_object(
-      [&](auto const typed_head) -> object_ptr {
-        using T = typename decltype(typed_head)::value_type;
+    auto const bs(object_behaviors(head));
 
-        if constexpr(behavior::chunk_like<T>)
-        {
-          return typed_head->nth(make_box(0));
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid chunked cons head: {}",
-                                                typed_head->to_string()) };
-        }
-      },
-      head);
+    if(bs.is_chunk_like)
+    {
+      return bs.nth(head, make_box(0));
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid chunked cons head: {}",
+                                            bs.to_string(head)) };
+    }
   }
 
   object_ptr chunked_cons::next() const
