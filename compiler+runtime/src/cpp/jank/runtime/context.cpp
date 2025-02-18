@@ -15,6 +15,7 @@
 #include <jank/read/parse.hpp>
 #include <jank/runtime/context.hpp>
 #include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/runtime/core/munge.hpp>
 #include <jank/analyze/processor.hpp>
@@ -519,43 +520,37 @@ namespace jank::runtime
   object_ptr context::macroexpand1(object_ptr const o)
   {
     profile::timer const timer{ "rt macroexpand1" };
-    return visit_seqable(
-      [this](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
+    auto const bs(object_behaviors(o));
+    if(!bs.is_sequenceable)
+    {
+      return o;
+    }
+    else
+    {
+      auto const first_sym_obj(dyn_cast<obj::symbol>(bs.first(o)));
+      if(!first_sym_obj)
+      {
+        return o;
+      }
 
-        if constexpr(!behavior::sequenceable<T>)
-        {
-          return typed_o;
-        }
-        else
-        {
-          auto const first_sym_obj(dyn_cast<obj::symbol>(first(typed_o)));
-          if(!first_sym_obj)
-          {
-            return typed_o;
-          }
+      auto const var(find_var(first_sym_obj));
+      /* None means it's not a var, so not a macro. No meta means no :macro set. */
+      if(var.is_none() || var.unwrap()->meta.is_none())
+      {
+        return o;
+      }
 
-          auto const var(find_var(first_sym_obj));
-          /* None means it's not a var, so not a macro. No meta means no :macro set. */
-          if(var.is_none() || var.unwrap()->meta.is_none())
-          {
-            return typed_o;
-          }
+      auto const meta(var.unwrap()->meta.unwrap());
+      auto const found_macro(get(meta, intern_keyword("", "macro", true).expect_ok()));
+      if(!found_macro || !truthy(found_macro))
+      {
+        return o;
+      }
 
-          auto const meta(var.unwrap()->meta.unwrap());
-          auto const found_macro(get(meta, intern_keyword("", "macro", true).expect_ok()));
-          if(!found_macro || !truthy(found_macro))
-          {
-            return typed_o;
-          }
-
-          /* TODO: Provide &env. */
-          auto const args(cons(cons(rest(typed_o), obj::nil::nil_const()), typed_o));
-          return apply_to(var.unwrap()->deref(), args);
-        }
-      },
-      [=]() { return o; },
-      o);
+      /* TODO: Provide &env. */
+      auto const args(cons(cons(rest(o), obj::nil::nil_const()), o));
+      return apply_to(var.unwrap()->deref(), args);
+    }
   }
 
   object_ptr context::macroexpand(object_ptr const o)
