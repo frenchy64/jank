@@ -3,7 +3,8 @@
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/obj/persistent_vector.hpp>
 #include <jank/runtime/obj/transient_vector.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/rtti.hpp>
 #include <jank/runtime/core/seq.hpp>
 #include <jank/runtime/core/seq_ext.hpp>
 #include <jank/runtime/behavior/sequential.hpp>
@@ -39,25 +40,18 @@ namespace jank::runtime::obj
       return make_box<persistent_vector>();
     }
 
-    return visit_object(
-      [](auto const typed_s) -> persistent_vector_ptr {
-        using T = typename decltype(typed_s)::value_type;
+    auto const bs(object_behaviors(s));
+    if(!bs.is_sequenceable)
+    {
+      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs.to_string(s)) };
+    }
 
-        if constexpr(behavior::sequenceable<T>)
-        {
-          runtime::detail::native_transient_vector v;
-          for(auto i(typed_s->fresh_seq()); i != nullptr; i = runtime::next_in_place(i))
-          {
-            v.push_back(i->first());
-          }
-          return make_box<persistent_vector>(v.persistent());
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid sequence: {}", typed_s->to_string()) };
-        }
-      },
-      s);
+    runtime::detail::native_transient_vector v;
+    for(auto i(bs.fresh_seq(s)); i != nullptr; i = object_behaviors(i).next_in_place(i))
+    {
+      v.push_back(runtime::first(i));
+    }
+    return make_box<persistent_vector>(v.persistent());
   }
 
   object_ptr persistent_vector::create_empty() const
@@ -95,35 +89,27 @@ namespace jank::runtime::obj
     }
     else
     {
-      return visit_object(
-        [&](auto const typed_o) -> native_bool {
-          using T = typename decltype(typed_o)::value_type;
+      auto const bs(object_behaviors(&o));
+      if(!bs.is_sequential)
+      {
+        return false;
+      }
+      size_t i{};
+      auto e(bs.fresh_seq(&o));
+      for(; e != nullptr; e = object_behaviors(e).next_in_place(e))
+      {
+        if(!runtime::equal(data[i], runtime::first(e)))
+        {
+          return false;
+        }
 
-          if constexpr(behavior::sequential<T>)
-          {
-            size_t i{};
-            auto e(typed_o->fresh_seq());
-            for(; e != nullptr; e = e->next_in_place())
-            {
-              if(!runtime::equal(data[i], e->first()))
-              {
-                return false;
-              }
-
-              if(++i == data.size())
-              {
-                e = e->next_in_place();
-                break;
-              }
-            }
-            return e == nullptr && i == data.size();
-          }
-          else
-          {
-            return false;
-          }
-        },
-        &o);
+        if(++i == data.size())
+        {
+          e = object_behaviors(e).next_in_place(e);
+          break;
+        }
+      }
+      return e == nullptr && i == data.size();
     }
   }
 
@@ -158,8 +144,7 @@ namespace jank::runtime::obj
 
   native_integer persistent_vector::compare(object const &o) const
   {
-    return visit_type<persistent_vector>([this](auto const typed_o) { return compare(*typed_o); },
-                                         &o);
+    return compare(*try_object<persistent_vector>(&o));
   }
 
   native_integer persistent_vector::compare(persistent_vector const &v) const
