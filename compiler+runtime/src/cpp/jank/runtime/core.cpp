@@ -25,20 +25,12 @@ namespace jank::runtime
         return 1;
       }
 
-      return visit_object(
-        [](auto const typed_l, auto const r) -> native_integer {
-          using L = typename decltype(typed_l)::value_type;
-          if constexpr(behavior::comparable<L>)
-          {
-            return typed_l->compare(*r);
-          }
-          else
-          {
-            throw std::runtime_error{ fmt::format("not comparable: {}", typed_l->to_string()) };
-          }
-        },
-        l,
-        r);
+      auto const bs(object_behaviors(l));
+      if(!bs.is_comparable)
+      {
+        throw std::runtime_error{ fmt::format("not comparable: {}", bs.to_string(l)) };
+      }
+      return bs.compare(l, r);
     }
 
     return -1;
