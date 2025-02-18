@@ -983,90 +983,85 @@ namespace jank::read::parse
       /* Handle all sorts of sequences. We do this by recursively walking through them,
        * flattening them, qualifying the symbols, and then building up code which will
        * reassemble them. */
-      return visit_seqable(
-        [&](auto const typed_form) -> result<object_ptr, error_ptr> {
-          using T = typename decltype(typed_form)::value_type;
+      auto const bs(object_behaviors(form));
 
-          if constexpr(std::same_as<T, obj::persistent_vector>)
-          {
-            auto expanded(syntax_quote_expand_seq(typed_form->seq()));
-            if(expanded.is_err())
-            {
-              return expanded;
-            }
+      /* For anything else, do nothing special aside from quoting. Hopefully that works. */
+      if(!bs.is_seqable)
+      {
+        return make_box<obj::persistent_list>(std::in_place, make_box<obj::symbol>("quote"), form);
+      }
 
-            return make_box<obj::persistent_list>(
-              std::in_place,
-              make_box<obj::symbol>("clojure.core/apply"),
-              make_box<obj::symbol>("clojure.core/vector"),
-              make_box<obj::persistent_list>(
-                std::in_place,
-                make_box<obj::symbol>("clojure.core/seq"),
-                conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat"))));
-          }
-          if constexpr(behavior::map_like<T>)
-          {
-            auto flattened(syntax_quote_flatten_map(typed_form->seq()));
-            if(flattened.is_err())
-            {
-              return flattened;
-            }
+      auto const seq(bs.seq(form));
+      if(form->type == object_type::persistent_vector)
+      {
+        auto expanded(syntax_quote_expand_seq(seq));
+        if(expanded.is_err())
+        {
+          return expanded;
+        }
 
-            auto expanded(syntax_quote_expand_seq(flattened.expect_ok()));
-            if(expanded.is_err())
-            {
-              return expanded;
-            }
+        return make_box<obj::persistent_list>(
+          std::in_place,
+          make_box<obj::symbol>("clojure.core/apply"),
+          make_box<obj::symbol>("clojure.core/vector"),
+          make_box<obj::persistent_list>(
+            std::in_place,
+            make_box<obj::symbol>("clojure.core/seq"),
+            conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat"))));
+      }
+      if(bs.is_map)
+      {
+        auto flattened(syntax_quote_flatten_map(seq));
+        if(flattened.is_err())
+        {
+          return flattened;
+        }
 
-            return make_box<obj::persistent_list>(
-              std::in_place,
-              make_box<obj::symbol>("clojure.core/apply"),
-              make_box<obj::symbol>("clojure.core/hash-map"),
-              make_box<obj::persistent_list>(
-                std::in_place,
-                make_box<obj::symbol>("clojure.core/seq"),
-                conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat"))));
-          }
-          if constexpr(behavior::set_like<T>)
-          {
-            return err(error::internal_parse_failure("nyi: set"));
-          }
-          if constexpr(std::same_as<T, obj::persistent_list>)
-          {
-            auto const seq(typed_form->seq());
-            if(!seq)
-            {
-              return make_box<obj::persistent_list>(std::in_place,
-                                                    make_box<obj::symbol>("clojure.core/list"));
-            }
-            else
-            {
-              auto expanded(syntax_quote_expand_seq(seq));
-              if(expanded.is_err())
-              {
-                return expanded;
-              }
+        auto expanded(syntax_quote_expand_seq(flattened.expect_ok()));
+        if(expanded.is_err())
+        {
+          return expanded;
+        }
 
-              return make_box<obj::persistent_list>(
-                std::in_place,
-                make_box<obj::symbol>("clojure.core/seq"),
-                conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat")));
-            }
-          }
-          else
-          {
-            return err(
-              error::internal_parse_failure(fmt::format("Unsupported collection type: {}",
-                                                        object_type_str(typed_form->base.type))));
-          }
-        },
-        /* For anything else, do nothing special aside from quoting. Hopefully that works. */
-        [=]() -> result<object_ptr, error_ptr> {
+        return make_box<obj::persistent_list>(
+          std::in_place,
+          make_box<obj::symbol>("clojure.core/apply"),
+          make_box<obj::symbol>("clojure.core/hash-map"),
+          make_box<obj::persistent_list>(
+            std::in_place,
+            make_box<obj::symbol>("clojure.core/seq"),
+            conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat"))));
+      }
+      if(bs.is_set)
+      {
+        return err(error::internal_parse_failure("nyi: set"));
+      }
+      if(form->type == object_type::persistent_list)
+      {
+        if(!seq)
+        {
           return make_box<obj::persistent_list>(std::in_place,
-                                                make_box<obj::symbol>("quote"),
-                                                form);
-        },
-        form);
+                                                make_box<obj::symbol>("clojure.core/list"));
+        }
+        else
+        {
+          auto expanded(syntax_quote_expand_seq(seq));
+          if(expanded.is_err())
+          {
+            return expanded;
+          }
+
+          return make_box<obj::persistent_list>(
+            std::in_place,
+            make_box<obj::symbol>("clojure.core/seq"),
+            conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat")));
+        }
+      }
+      else
+      {
+        return err(error::internal_parse_failure(
+          fmt::format("Unsupported collection type: {}", object_type_str(bs.base(seq).type))));
+      }
     }
   }
 
