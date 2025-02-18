@@ -1,6 +1,6 @@
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/behaviors.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/obj/character.hpp>
 
 namespace jank::runtime
 {
@@ -21,7 +21,7 @@ namespace jank::runtime
 
   native_persistent_string to_code_string(object const * const o)
   {
-    return visit_object([](auto const typed_o) { return typed_o->to_code_string(); }, o);
+    return object_behaviors(o).to_code_string(o);
   }
 
   void to_code_string(char const ch, util::string_builder &buff)
@@ -31,8 +31,6 @@ namespace jank::runtime
 
   void to_code_string(object_ptr const o, util::string_builder &buff)
   {
-    auto const value{ visit_object([](auto const typed_o) { return typed_o->to_code_string(); },
-                                   o) };
-    buff(value);
+    buff(object_behaviors(o).to_code_string(o));
   }
 }
