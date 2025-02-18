@@ -215,7 +215,8 @@ namespace jank::runtime::obj
     for(auto it(object_behaviors(this).fresh_seq(this)); it != nullptr;
         it = object_behaviors(it).next_in_place(it), seq = object_behaviors(seq).next_in_place(seq))
     {
-      if(seq == nullptr || !runtime::equal(object_behaviors(it).first(it), object_behaviors(seq).first(seq)))
+      if(seq == nullptr
+         || !runtime::equal(object_behaviors(it).first(it), object_behaviors(seq).first(seq)))
       {
         return false;
       }
