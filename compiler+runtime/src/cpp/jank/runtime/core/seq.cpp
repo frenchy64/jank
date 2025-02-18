@@ -463,7 +463,8 @@ namespace jank::runtime
         {
           return visit_object(
             [&](auto const typed_keys) -> object_ptr {
-              if(object_behaviors(typed_keys).is_seqable)
+              auto const keys_bs(object_behaviors(typed_keys));
+              if(keys_bs.is_seqable)
               {
                 object_ptr ret{ typed_m };
                 for(auto seq(object_behaviors(typed_keys).fresh_seq(typed_keys)); seq != nullptr;
