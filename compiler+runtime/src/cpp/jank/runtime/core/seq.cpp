@@ -711,38 +711,31 @@ namespace jank::runtime
 
   size_t sequence_length(object_ptr const s, size_t const max)
   {
-    if(s == nullptr)
+    if(s == nullptr || is_nil(s))
     {
       return 0;
     }
 
-    return visit_object(
-      [&](auto const typed_s) -> size_t {
-        using T = typename decltype(typed_s)::value_type;
-
-        if constexpr(std::same_as<T, obj::nil>)
-        {
-          return 0;
-        }
-        else if constexpr(behavior::countable<T>)
-        {
-          return typed_s->count();
-        }
-        else if constexpr(behavior::seqable<T>)
-        {
-          size_t length{ 0 };
-          for(auto i(typed_s->fresh_seq()); i != nullptr && length < max; i = next_in_place(i))
-          {
-            ++length;
-          }
-          return length;
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not seqable: {}", typed_s->to_string()) };
-        }
-      },
-      s);
+    auto const bs(object_behaviors(s));
+    if(bs.is_countable)
+    {
+      return bs.count(s);
+    }
+    else if(bs.is_seqable)
+    {
+      size_t length{ 0 };
+      //TODO next_in_place perf
+      for(auto i(bs.fresh_seq(s)); i != nullptr && length < max;
+          i = object_behaviors(i).next_in_place(i))
+      {
+        ++length;
+      }
+      return length;
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
+    }
   }
 
   native_bool sequence_equal(object_ptr const l, object_ptr const r)
@@ -752,40 +745,41 @@ namespace jank::runtime
       return true;
     }
 
-    /* TODO: visit_sequence. */
-    return visit_seqable(
-      [](auto const typed_l, object_ptr const r) -> native_bool {
-        return visit_seqable(
-          [](auto const typed_r, auto const typed_l) -> native_bool {
-            auto r_it(typed_r->fresh_seq());
-            auto l_it(typed_l->fresh_seq());
-            if(!r_it)
-            {
-              return l_it == nullptr;
-            }
-            if(!l_it)
-            {
-              return r_it == nullptr;
-            }
+    auto const l_bs(object_behaviors(l));
+    if(!l_bs.is_seqable)
+    {
+      throw std::runtime_error{ "not seqable: " + l_bs.to_code_string(l) };
+    }
+    auto const r_bs(object_behaviors(r));
+    if(!r_bs.is_seqable)
+    {
+      throw std::runtime_error{ "not seqable: " + r_bs.to_code_string(l) };
+    }
+    auto l_it(l_bs.fresh_seq(l));
+    auto r_it(r_bs.fresh_seq(r));
+    if(!r_it)
+    {
+      return l_it == nullptr;
+    }
+    if(!l_it)
+    {
+      return r_it == nullptr;
+    }
 
-            for(; l_it != nullptr; l_it = l_it->next_in_place(), r_it = r_it->next_in_place())
-            {
-              if(!r_it)
-              {
-                return false;
-              }
-              if(!runtime::equal(l_it->first(), r_it->first()))
-              {
-                return false;
-              }
-            }
-            return r_it == nullptr;
-          },
-          r,
-          typed_l);
-      },
-      l,
-      r);
+    //TODO next_in_place / first perf
+    for(; l_it != nullptr; l_it = object_behaviors(l_it).next_in_place(l_it),
+                           r_it = object_behaviors(r_it).next_in_place(r_it))
+    {
+      if(!r_it)
+      {
+        return false;
+      }
+      if(!runtime::equal(object_behaviors(l_it).first(l_it), object_behaviors(r_it).first(r_it)))
+      {
+        return false;
+      }
+    }
+    return r_it == nullptr;
   }
 
   object_ptr reduce(object_ptr const f, object_ptr const init, object_ptr const s)
