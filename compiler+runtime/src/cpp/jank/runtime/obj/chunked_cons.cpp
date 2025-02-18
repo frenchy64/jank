@@ -3,10 +3,15 @@
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/obj/chunked_cons.hpp>
 #include <jank/runtime/behaviors.hpp>
-#include <jank/runtime/visit.hpp>
 #include <jank/runtime/core/make_box.hpp>
 #include <jank/runtime/core/seq.hpp>
+#include <jank/runtime/core/to_string.hpp>
+#include <jank/runtime/core.hpp>
 #include <jank/runtime/behavior/chunkable.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
+#include <jank/runtime/obj/array_chunk.hpp>
+#include <jank/runtime/obj/cons.hpp>
+#include <jank/runtime/obj/chunk_buffer.hpp>
 
 namespace jank::runtime::obj
 {
@@ -42,8 +47,7 @@ namespace jank::runtime::obj
 
     if(!bs.is_chunk_like)
     {
-      throw std::runtime_error{ fmt::format("invalid chunked cons head: {}",
-                                            bs.to_string(head)) };
+      throw std::runtime_error{ fmt::format("invalid chunked cons head: {}", bs.to_string(head)) };
     }
     return bs.nth(head, make_box(0));
   }
@@ -54,8 +58,7 @@ namespace jank::runtime::obj
 
     if(!bs.is_chunk_like)
     {
-      throw std::runtime_error{ fmt::format("invalid chunked cons head: {}",
-                                            bs.to_string(head)) };
+      throw std::runtime_error{ fmt::format("invalid chunked cons head: {}", bs.to_string(head)) };
     }
 
     if(1 < bs.count(head))
@@ -135,8 +138,8 @@ namespace jank::runtime::obj
     for(object_ptr it(fresh_seq()); it != nullptr;
         it = object_behaviors(it).next_in_place(it), seq = object_behaviors(seq).next_in_place(seq))
     {
-      if(seq == nullptr || !runtime::equal(object_behaviors(it).first(it),
-                                           object_behaviors(seq).first(seq)))
+      if(seq == nullptr
+         || !runtime::equal(object_behaviors(it).first(it), object_behaviors(seq).first(seq)))
       {
         return false;
       }
