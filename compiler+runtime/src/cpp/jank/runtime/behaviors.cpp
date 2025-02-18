@@ -54,6 +54,7 @@
 #include <jank/runtime/behavior/associatively_readable.hpp>
 #include <jank/runtime/behavior/associatively_writable.hpp>
 #include <jank/runtime/behavior/callable.hpp>
+#include <jank/runtime/behavior/comparable.hpp>
 #include <jank/runtime/behavior/chunkable.hpp>
 #include <jank/runtime/behavior/collection_like.hpp>
 #include <jank/runtime/behavior/countable.hpp>
@@ -194,6 +195,13 @@ namespace jank::runtime
     if constexpr(std::is_base_of_v<behavior::callable, T>)
     {
       this->is_callable = true;
+    }
+    if constexpr(behavior::comparable<T>)
+    {
+      this->is_comparable = true;
+      this->compare = [](object_ptr const lhs, object_ptr const rhs) {
+        return try_object<T>(lhs)->compare(*rhs);
+      };
     }
     if constexpr(behavior::function_like<T>)
     {

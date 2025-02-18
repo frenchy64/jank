@@ -25,6 +25,7 @@ namespace jank::runtime
     native_bool is_callable{};
     native_bool is_chunk_like{};
     native_bool is_chunkable{};
+    native_bool is_comparable{};
     native_bool is_conjable{};
     native_bool is_conjable_in_place{};
     native_bool is_collection{};
@@ -54,6 +55,9 @@ namespace jank::runtime
     std::function<native_hash(object_ptr const)> to_hash{};
     std::function<native_bool(object_ptr const, object_ptr const)> equal{};
     std::function<object(object_ptr const)> base{};
+
+    /* behavior::comparable */
+    std::function<native_bool(object_ptr const, object_ptr const)> compare{};
 
     /* behavior::number_like */
     std::function<native_integer(object_ptr const o)> to_integer{};

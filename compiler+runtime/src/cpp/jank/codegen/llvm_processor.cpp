@@ -15,6 +15,7 @@
 #include <jank/codegen/llvm_processor.hpp>
 #include <jank/runtime/context.hpp>
 #include <jank/runtime/core.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/visit.hpp>
 #include <jank/evaluate.hpp>
 #include <jank/profile/time.hpp>
@@ -393,37 +394,70 @@ namespace jank::codegen
   llvm::Value *llvm_processor::gen(expr::primitive_literal<expression> const &expr,
                                    expr::function_arity<expression> const &)
   {
-    auto const ret(runtime::visit_object(
-      [&](auto const typed_o) -> llvm::Value * {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(std::same_as<T, runtime::obj::nil> || std::same_as<T, runtime::obj::boolean>
-                     || std::same_as<T, runtime::obj::integer>
-                     || std::same_as<T, runtime::obj::real> || std::same_as<T, runtime::obj::symbol>
-                     || std::same_as<T, runtime::obj::character>
-                     || std::same_as<T, runtime::obj::keyword>
-                     || std::same_as<T, runtime::obj::persistent_string>
-                     || std::same_as<T, runtime::obj::ratio>)
+    auto const o(expr.data);
+    llvm::Value *ret{};
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
+    switch(o->type)
+    {
+      case runtime::object_type::nil:
         {
-          return gen_global(typed_o);
+          ret = gen_global(expect_object<runtime::obj::nil>(o));
+          break;
         }
-        else if constexpr(std::same_as<T, runtime::obj::persistent_vector>
-                          || std::same_as<T, runtime::obj::persistent_list>
-                          || std::same_as<T, runtime::obj::persistent_hash_set>
-                          || std::same_as<T, runtime::obj::persistent_array_map>
-                          || std::same_as<T, runtime::obj::persistent_hash_map>
-                          /* Cons, etc. */
-                          || runtime::behavior::seqable<T>)
+      case runtime::object_type::boolean:
         {
-          return gen_global_from_read_string(typed_o);
+          ret = gen_global(expect_object<runtime::obj::boolean>(o));
+          break;
         }
-        else
+      case runtime::object_type::integer:
         {
-          throw std::runtime_error{ fmt::format("unimplemented constant codegen: {}\n",
-                                                typed_o->to_string()) };
+          ret = gen_global(expect_object<runtime::obj::integer>(o));
+          break;
         }
-      },
-      expr.data));
+      case runtime::object_type::real:
+        {
+          ret = gen_global(expect_object<runtime::obj::real>(o));
+          break;
+        }
+      case runtime::object_type::symbol:
+        {
+          ret = gen_global(expect_object<runtime::obj::symbol>(o));
+          break;
+        }
+      case runtime::object_type::character:
+        {
+          ret = gen_global(expect_object<runtime::obj::character>(o));
+          break;
+        }
+      case runtime::object_type::keyword:
+        {
+          ret = gen_global(expect_object<runtime::obj::keyword>(o));
+          break;
+        }
+      case runtime::object_type::persistent_string:
+        {
+          ret = gen_global(expect_object<runtime::obj::persistent_string>(o));
+          break;
+        }
+      case runtime::object_type::ratio:
+        {
+          ret = gen_global(expect_object<runtime::obj::ratio>(o));
+          break;
+        }
+      default:
+        {
+          auto const bs(object_behaviors(o));
+          if(!bs.is_seqable)
+          {
+            throw std::runtime_error{ fmt::format("unimplemented constant codegen: {}\n",
+                                                  bs.to_string(o)) };
+          }
+          ret = gen_global_from_read_string(o);
+          break;
+        }
+#pragma clang diagnostic pop
+    }
 
     if(expr.position == expression_position::tail)
     {
@@ -1373,27 +1407,23 @@ namespace jank::codegen
       auto const call(ctx->builder->CreateCall(create_fn, args));
       ctx->builder->CreateStore(call, global);
 
-      runtime::visit_object(
-        [&](auto const typed_o) {
-          using T = typename decltype(typed_o)::value_type;
+      auto const bs(object_behaviors(o));
+      if(bs.is_metadatable)
+      {
+        auto const ometa(bs.meta(o));
+        if(ometa)
+        {
+          auto const set_meta_fn_type(
+            llvm::FunctionType::get(ctx->builder->getVoidTy(),
+                                    { ctx->builder->getPtrTy(), ctx->builder->getPtrTy() },
+                                    false));
+          auto const set_meta_fn(
+            ctx->module->getOrInsertFunction("jank_set_meta", set_meta_fn_type));
 
-          if constexpr(behavior::metadatable<T>)
-          {
-            if(typed_o->meta)
-            {
-              auto const set_meta_fn_type(
-                llvm::FunctionType::get(ctx->builder->getVoidTy(),
-                                        { ctx->builder->getPtrTy(), ctx->builder->getPtrTy() },
-                                        false));
-              auto const set_meta_fn(
-                ctx->module->getOrInsertFunction("jank_set_meta", set_meta_fn_type));
-
-              auto const meta(gen_global_from_read_string(typed_o->meta.unwrap()));
-              ctx->builder->CreateCall(set_meta_fn, { global, meta });
-            }
-          }
-        },
-        o);
+          auto const meta(gen_global_from_read_string(ometa.unwrap()));
+          ctx->builder->CreateCall(set_meta_fn, { global, meta });
+        }
+      }
 
       if(prev_block == ctx->global_ctor_block)
       {
