@@ -878,45 +878,44 @@ namespace jank::read::parse
       return obj::nil::nil_const();
     }
 
-    return visit_seqable(
-      [](auto const typed_seq) -> result<object_ptr, error_ptr> {
-        runtime::detail::native_transient_vector ret;
-        for(auto it(typed_seq->fresh_seq()); it != nullptr; it = next_in_place(it))
-        {
-          auto item(it->first());
-          ret.push_back(first(item));
-          ret.push_back(second(item));
-        }
-        auto const vec(make_box<obj::persistent_vector>(ret.persistent())->seq());
-        return vec ?: obj::nil::nil_const();
-      },
-      []() -> result<object_ptr, error_ptr> {
-        return err(error::internal_parse_failure("syntax_quote_flatten_map arg is not a seq"));
-      },
-      seq);
+    auto const bs(object_behaviors(seq));
+    if(!bs.is_seqable)
+    {
+      return err(error::internal_parse_failure("syntax_quote_flatten_map arg is not a seq"));
+    }
+
+    runtime::detail::native_transient_vector ret;
+    for(auto it(bs.fresh_seq(seq)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    {
+      auto item(object_behaviors(it).first(it));
+      ret.push_back(first(item));
+      ret.push_back(second(item));
+    }
+    auto const vec(make_box<obj::persistent_vector>(ret.persistent())->seq());
+    return vec ?: obj::nil::nil_const();
   }
 
   native_bool processor::syntax_quote_is_unquote(object_ptr const form, native_bool const splice)
   {
-    return visit_seqable(
-      [splice](auto const typed_form) {
-        object_ptr item{};
-        auto const s(typed_form->seq());
-        if(!s)
-        {
-          item = obj::nil::nil_const();
-        }
-        else
-        {
-          item = s->first();
-        }
+    auto const bs(object_behaviors(form));
+    if(!bs.is_seqable)
+    {
+      return false;
+    }
+    object_ptr item{};
+    auto const s(bs.seq(form));
+    if(!s)
+    {
+      item = obj::nil::nil_const();
+    }
+    else
+    {
+      item = first(s);
+    }
 
-        return make_box<obj::symbol>(
-                 (splice ? "clojure.core/unquote-splicing" : "clojure.core/unquote"))
-          ->equal(*item);
-      },
-      [] { return false; },
-      form);
+    return make_box<obj::symbol>(
+             (splice ? "clojure.core/unquote-splicing" : "clojure.core/unquote"))
+      ->equal(*item);
   }
 
   result<object_ptr, error_ptr> processor::syntax_quote(object_ptr const form)
