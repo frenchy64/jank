@@ -80,7 +80,9 @@ namespace jank::runtime
     {
       this->is_object_like = true;
       this->to_string = [](object_ptr const o) { return try_object<T>(o)->to_string(); };
-      this->to_string_builder = [](object_ptr const o, util::string_builder &buff) { return try_object<T>(o)->to_string(buff); };
+      this->to_string_builder = [](object_ptr const o, util::string_builder &buff) {
+        return try_object<T>(o)->to_string(buff);
+      };
       this->to_code_string = [](object_ptr const o) { return try_object<T>(o)->to_code_string(); };
       this->to_hash = [](object_ptr const o) { return try_object<T>(o)->to_hash(); };
       this->equal = [](object_ptr const lhs, object_ptr const rhs) {
