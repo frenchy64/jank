@@ -7,6 +7,7 @@
 #include <jank/error/parse.hpp>
 #include <jank/util/escape.hpp>
 #include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/context.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/runtime/obj/symbol.hpp>
@@ -788,29 +789,31 @@ namespace jank::read::parse
           }
 
           auto const s(next_in_place(it)->first());
-          return visit_seqable(
-            [&](auto const typed_s) -> processor::object_result {
-              auto const seq(typed_s->fresh_seq());
-              if(!seq)
-              {
-                return ok(none);
-              }
-              auto const first(seq->first());
+          auto const s_bs(object_behaviors(s));
+          if(!s_bs.is_seqable)
+          {
+            /* TODO: Get the source of just this form. */
+            return error::parse_invalid_reader_splice({ start_token.start, latest_token.end },
+                                                      "#?@ must be used on a sequence");
+          }
+          auto const seq(s_bs.fresh_seq(s));
+          if(!seq)
+          {
+            return ok(none);
+          }
 
-              auto const front(pending_forms.begin());
-              for(auto it(next_in_place(seq)); it != nullptr; it = next_in_place(it))
-              {
-                pending_forms.insert(front, it->first());
-              }
+          auto const seq_bs(object_behaviors(seq));
+          auto const first(seq_bs.first(seq));
 
-              return object_source_info{ first, start_token, list_end };
-            },
-            [&]() -> processor::object_result {
-              /* TODO: Get the source of just this form. */
-              return error::parse_invalid_reader_splice({ start_token.start, latest_token.end },
-                                                        "#?@ must be used on a sequence");
-            },
-            s);
+          auto const front(pending_forms.begin());
+          //TODO next_in_place / first perf
+          for(auto it(seq_bs.next_in_place(seq)); it != nullptr;
+              it = object_behaviors(it).next_in_place(it))
+          {
+            pending_forms.insert(front, object_behaviors(it).first(it));
+          }
+
+          return object_source_info{ first, start_token, list_end };
         }
         else
         {
