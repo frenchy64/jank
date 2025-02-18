@@ -1,6 +1,11 @@
 #include <jank/runtime/obj/persistent_sorted_set.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/core/seq.hpp>
+#include <jank/runtime/core/to_string.hpp>
+#include <jank/runtime/obj/nil.hpp>
+#include <jank/runtime/obj/persistent_sorted_set_sequence.hpp>
+#include <jank/runtime/obj/transient_sorted_set.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
 
 namespace jank::runtime::obj
 {
@@ -29,16 +34,18 @@ namespace jank::runtime::obj
 
   persistent_sorted_set_ptr persistent_sorted_set::create_from_seq(object_ptr const seq)
   {
-    return make_box<persistent_sorted_set>(visit_seqable(
-      [](auto const typed_seq) -> persistent_sorted_set::value_type {
-        runtime::detail::native_transient_sorted_set transient;
-        for(auto it(typed_seq->fresh_seq()); it != nullptr; it = runtime::next_in_place(it))
-        {
-          transient.insert_v(it->first());
-        }
-        return transient.persistent();
-      },
-      seq));
+    auto const bs(object_behaviors(seq));
+    if(!bs.is_seqable)
+    {
+      throw std::runtime_error{ "not seqable: " + bs.to_code_string(seq) };
+    }
+
+    runtime::detail::native_transient_sorted_set transient;
+    for(auto it(bs.fresh_seq(seq)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    {
+      transient.insert_v(object_behaviors(it).first(it));
+    }
+    return make_box<persistent_sorted_set>(transient.persistent());
   }
 
   native_bool persistent_sorted_set::equal(object const &o) const
@@ -48,25 +55,26 @@ namespace jank::runtime::obj
       return true;
     }
 
-    return visit_set_like(
-      [&](auto const typed_o) -> native_bool {
-        if(typed_o->count() != count())
-        {
-          return false;
-        }
+    auto const bs(object_behaviors(&o));
+    if(!bs.is_set)
+    {
+      return false;
+    }
 
-        for(auto const entry : data)
-        {
-          if(!typed_o->contains(entry))
-          {
-            return false;
-          }
-        }
+    if(bs.count(&o) != count())
+    {
+      return false;
+    }
 
-        return true;
-      },
-      []() { return false; },
-      &o);
+    for(auto const entry : data)
+    {
+      if(!bs.contains(&o, entry))
+      {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   void persistent_sorted_set::to_string(util::string_builder &buff) const
