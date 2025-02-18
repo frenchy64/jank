@@ -49,6 +49,7 @@ namespace jank::runtime
 
     /* behavior::object_like */
     std::function<native_persistent_string(object_ptr const)> to_string{};
+    std::function<void(object_ptr const, util::string_builder &)> to_string_builder{};
     std::function<native_persistent_string(object_ptr const)> to_code_string{};
     std::function<native_hash(object_ptr const)> to_hash{};
     std::function<native_bool(object_ptr const, object_ptr const)> equal{};
