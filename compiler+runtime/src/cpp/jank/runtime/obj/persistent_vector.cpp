@@ -7,6 +7,10 @@
 #include <jank/runtime/rtti.hpp>
 #include <jank/runtime/core/seq.hpp>
 #include <jank/runtime/core/seq_ext.hpp>
+#include <jank/runtime/obj/persistent_vector_sequence.hpp>
+#include <jank/runtime/core/to_string.hpp>
+#include <jank/runtime/obj/number.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
 #include <jank/runtime/behavior/sequential.hpp>
 
 namespace jank::runtime::obj

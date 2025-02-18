@@ -1,6 +1,8 @@
 #include <jank/runtime/obj/native_vector_sequence.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/runtime/core/seq_ext.hpp>
+#include <jank/runtime/obj/cons.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
 
 namespace jank::runtime::obj
 {

@@ -5,6 +5,9 @@
 #include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/core/seq.hpp>
 #include <jank/runtime/core/seq_ext.hpp>
+#include <jank/runtime/core/to_string.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
+#include <jank/runtime/obj/persistent_list_sequence.hpp>
 
 namespace jank::runtime::obj
 {

@@ -1,7 +1,9 @@
 #include <jank/runtime/obj/persistent_string_sequence.hpp>
 #include <jank/runtime/obj/persistent_string.hpp>
 #include <jank/runtime/core/seq_ext.hpp>
+#include <jank/runtime/core/to_string.hpp>
 #include <jank/runtime/core/make_box.hpp>
+#include <jank/runtime/obj/cons.hpp>
 
 namespace jank::runtime::obj
 {
