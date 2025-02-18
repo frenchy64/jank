@@ -1,8 +1,12 @@
 #include <jank/runtime/obj/integer_range.hpp>
 #include <jank/runtime/core/math.hpp>
 #include <jank/runtime/core/make_box.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/core/to_string.hpp>
+#include <jank/runtime/core.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/behavior/metadatable.hpp>
+#include <jank/runtime/obj/cons.hpp>
+#include <jank/runtime/obj/repeat.hpp>
 
 namespace jank::runtime::obj
 {
@@ -130,22 +134,25 @@ namespace jank::runtime::obj
 
   native_bool integer_range::equal(object const &o) const
   {
-    return visit_seqable(
-      [this](auto const typed_o) {
-        auto seq(typed_o->fresh_seq());
-        /* TODO: This is common code; can it be shared? */
-        for(auto it(fresh_seq()); it != nullptr;
-            it = it->next_in_place(), seq = seq->next_in_place())
-        {
-          if(seq == nullptr || !runtime::equal(it, seq->first()))
-          {
-            return false;
-          }
-        }
-        return true;
-      },
-      []() { return false; },
-      &o);
+    auto const bs(object_behaviors(&o));
+    if(!bs.is_seqable)
+    {
+      return false;
+    }
+
+    auto seq(bs.fresh_seq(&o));
+    /* TODO: This is common code; can it be shared? */
+    // TODO next_in_place / first perf
+    for(object_ptr it(fresh_seq()); it != nullptr;
+        it = object_behaviors(it).next_in_place(it), seq = object_behaviors(seq).next_in_place(seq))
+    {
+      if(seq == nullptr
+         || !runtime::equal(object_behaviors(it).first(it), object_behaviors(seq).first(seq)))
+      {
+        return false;
+      }
+    }
+    return true;
   }
 
   void integer_range::to_string(util::string_builder &buff) const
