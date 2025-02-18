@@ -461,34 +461,29 @@ namespace jank::runtime
       [&](auto const typed_m) -> object_ptr {
         if(object_behaviors(typed_m).is_associatively_readable)
         {
-          return visit_object(
-            [&](auto const typed_keys) -> object_ptr {
-              auto const keys_bs(object_behaviors(typed_keys));
-              if(keys_bs.is_seqable)
-              {
-                object_ptr ret{ typed_m };
-                //TODO next_in_place / first perf
-                for(auto seq(keys_bs.fresh_seq(typed_keys)); seq != nullptr;
-                    seq = object_behaviors(seq).next_in_place(seq))
-                {
-                  //TODO sentinel for fallback short circuiting
-                  ret = get(ret, object_behaviors(seq).first(seq));
-                }
+          auto const keys_bs(object_behaviors(keys));
+          if(keys_bs.is_seqable)
+          {
+            object_ptr ret{ typed_m };
+            //TODO next_in_place / first perf
+            for(auto seq(keys_bs.fresh_seq(keys)); seq != nullptr;
+                seq = object_behaviors(seq).next_in_place(seq))
+            {
+              //TODO sentinel for fallback short circuiting
+              ret = get(ret, object_behaviors(seq).first(seq));
+            }
 
-                if(ret == obj::nil::nil_const())
-                {
-                  return fallback;
-                }
-                return ret;
-              }
-              else
-              {
-                throw std::runtime_error{
-                  fmt::format("not seqable: {}", object_behaviors(typed_keys).to_string(typed_keys))
-                };
-              }
-            },
-            keys);
+            if(ret == obj::nil::nil_const())
+            {
+              return fallback;
+            }
+            return ret;
+          }
+          else
+          {
+            throw std::runtime_error{ fmt::format("not seqable: {}",
+                                                  object_behaviors(keys).to_string(keys)) };
+          }
         }
         else
         {
