@@ -64,8 +64,7 @@ namespace jank::runtime::obj
       it = it_bs.next_in_place(it);
       if(!it)
       {
-        throw std::runtime_error{ fmt::format("Odd number of elements: {}",
-                                              bs.to_string(seq)) };
+        throw std::runtime_error{ fmt::format("Odd number of elements: {}", bs.to_string(seq)) };
       }
       // TODO not confident using it_bs.first here..
       auto const val(runtime::first(it));
