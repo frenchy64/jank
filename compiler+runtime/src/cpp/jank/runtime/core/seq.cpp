@@ -467,7 +467,8 @@ namespace jank::runtime
               if(keys_bs.is_seqable)
               {
                 object_ptr ret{ typed_m };
-                for(auto seq(object_behaviors(typed_keys).fresh_seq(typed_keys)); seq != nullptr;
+                //TODO next_in_place / first perf
+                for(auto seq(keys_bs.fresh_seq(typed_keys)); seq != nullptr;
                     seq = object_behaviors(seq).next_in_place(seq))
                 {
                   //TODO sentinel for fallback short circuiting
