@@ -531,9 +531,8 @@ namespace jank::runtime
   {
     return visit_object(
       [&](auto const typed_m) -> object_ptr {
-        using T = typename decltype(typed_m)::value_type;
-
-        if constexpr(behavior::associatively_writable<T>)
+        auto const m_bs(object_behaviors(typed_m));
+        if(m_bs.is_associatively_writable)
         {
           return visit_object(
             [&](auto const typed_other) -> object_ptr {
@@ -555,7 +554,7 @@ namespace jank::runtime
               else
               {
                 throw std::runtime_error{ fmt::format("not associatively readable: {}",
-                                                      typed_m->to_string()) };
+                                                      m_bs.to_string(typed_m)) };
               }
             },
             other);
@@ -563,7 +562,7 @@ namespace jank::runtime
         else
         {
           throw std::runtime_error{ fmt::format("not associatively writable: {}",
-                                                typed_m->to_string()) };
+                                                m_bs.to_string(typed_m)) };
         }
       },
       m);
