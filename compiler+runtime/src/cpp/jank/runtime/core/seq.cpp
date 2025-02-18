@@ -3,21 +3,24 @@
 #include <fmt/core.h>
 
 #include <jank/native_persistent_string/fmt.hpp>
-#include <jank/runtime/visit.hpp>
-#include <jank/runtime/behavior/associatively_readable.hpp>
-#include <jank/runtime/behavior/associatively_writable.hpp>
-#include <jank/runtime/behavior/callable.hpp>
-#include <jank/runtime/behavior/countable.hpp>
-#include <jank/runtime/behavior/set_like.hpp>
-#include <jank/runtime/behavior/sequential.hpp>
-#include <jank/runtime/behavior/collection_like.hpp>
-#include <jank/runtime/behavior/transientable.hpp>
-#include <jank/runtime/behavior/indexable.hpp>
-#include <jank/runtime/behavior/stackable.hpp>
-#include <jank/runtime/behavior/chunkable.hpp>
-#include <jank/runtime/behavior/metadatable.hpp>
 #include <jank/runtime/core.hpp>
+#include <jank/runtime/obj/array_chunk.hpp>
+#include <jank/runtime/obj/chunk_buffer.hpp>
+#include <jank/runtime/obj/chunked_cons.hpp>
+#include <jank/runtime/obj/cons.hpp>
+#include <jank/runtime/obj/persistent_vector.hpp>
+#include <jank/runtime/obj/native_vector_sequence.hpp>
+#include <jank/runtime/obj/transient_hash_set.hpp>
+#include <jank/runtime/obj/persistent_hash_set.hpp>
+#include <jank/runtime/obj/transient_vector.hpp>
+#include <jank/runtime/obj/transient_sorted_set.hpp>
+#include <jank/runtime/obj/reduced.hpp>
+#include <jank/runtime/obj/repeat.hpp>
+#include <jank/runtime/obj/iterator.hpp>
+#include <jank/runtime/detail/type.hpp>
+#include <jank/runtime/behavior/callable.hpp>
 #include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/rtti.hpp>
 
 namespace jank::runtime
 {
@@ -657,20 +660,15 @@ namespace jank::runtime
 
   object_ptr empty(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::collection_like<T>)
-        {
-          return T::empty();
-        }
-        else
-        {
-          return obj::nil::nil_const();
-        }
-      },
-      o);
+    auto const bs(object_behaviors(o));
+    if(bs.is_collection)
+    {
+      return bs.empty(o);
+    }
+    else
+    {
+      return obj::nil::nil_const();
+    }
   }
 
   native_persistent_string str(object_ptr const o, object_ptr const args)
