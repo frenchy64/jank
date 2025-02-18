@@ -115,13 +115,19 @@ namespace jank::runtime
     if constexpr(behavior::associatively_readable<T> && behavior::associatively_writable<T>)
     {
       this->is_associative = true;
+    }
+    if constexpr(behavior::associatively_writable<T>)
+    {
       this->is_associatively_writable = true;
-      this->is_associatively_readable = true;
       this->assoc = [](object_ptr const m, object_ptr const k, object_ptr const v) {
         return try_object<T>(m)->assoc(k, v);
       };
       this->dissoc
         = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->dissoc(k); };
+    }
+    if constexpr(behavior::associatively_readable<T>)
+    {
+      this->is_associatively_readable = true;
       this->get = [](object_ptr const m, object_ptr const k) { return try_object<T>(m)->get(k); };
       this->get_default = [](object_ptr const m, object_ptr const k, object_ptr const d) {
         return try_object<T>(m)->get(k, d);
