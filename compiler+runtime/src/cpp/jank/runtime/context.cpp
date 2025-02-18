@@ -20,15 +20,12 @@
 #include <jank/runtime/obj/persistent_sorted_set.hpp>
 #include <jank/runtime/obj/persistent_hash_map.hpp>
 #include <jank/runtime/obj/atom.hpp>
-#include <jank/runtime/var.hpp>
 #include <jank/runtime/rtti.hpp>
 #include <jank/runtime/behavior/callable.hpp>
 #include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/runtime/core/munge.hpp>
-#include <jank/analyze/processor.hpp>
 #include <jank/evaluate.hpp>
-#include <jank/jit/processor.hpp>
 #include <jank/util/mapped_file.hpp>
 #include <jank/util/process_location.hpp>
 #include <jank/util/clang_format.hpp>
