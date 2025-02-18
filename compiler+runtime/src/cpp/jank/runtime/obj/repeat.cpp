@@ -1,8 +1,11 @@
 #include <jank/runtime/obj/repeat.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/core.hpp>
 #include <jank/runtime/core/math.hpp>
 #include <jank/runtime/core/make_box.hpp>
 #include <jank/runtime/core/seq.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
+#include <jank/runtime/obj/cons.hpp>
 
 namespace jank::runtime::obj
 {
@@ -81,22 +84,26 @@ namespace jank::runtime::obj
 
   native_bool repeat::equal(object const &o) const
   {
-    return visit_seqable(
-      [this](auto const typed_o) {
-        auto seq(typed_o->fresh_seq());
-        /* TODO: This is common code; can it be shared? */
-        for(auto it(fresh_seq()); it != nullptr;
-            it = runtime::next_in_place(it), seq = runtime::next_in_place(seq))
+    auto const bs(object_behaviors(&o));
+    if(!bs.is_seqable)
+    {
+      return false;
+    }
+    else
+    {
+      auto seq(bs.fresh_seq(&o));
+      /* TODO: This is common code; can it be shared? */
+      //TODO next_in_place / first perf
+      for(auto it(object_behaviors(seq).fresh_seq(seq)); it != nullptr;
+          it = object_behaviors(it).fresh_seq(it), seq = object_behaviors(seq).fresh_seq(seq))
+      {
+        if(seq == nullptr || !runtime::equal(runtime::first(it), runtime::first(seq)))
         {
-          if(seq == nullptr || !runtime::equal(it, seq->first()))
-          {
-            return false;
-          }
+          return false;
         }
-        return true;
-      },
-      []() { return false; },
-      &o);
+      }
+      return true;
+    }
   }
 
   void repeat::to_string(util::string_builder &buff)
