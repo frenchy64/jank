@@ -72,69 +72,50 @@ namespace jank::runtime::obj
       return nullptr;
     }
 
-    return visit_object(
-      [&](auto const typed_tail) -> chunked_cons_ptr {
-        using T = typename decltype(typed_tail)::value_type;
+    auto const tail(o->tail);
+    auto const bs(object_behaviors(tail));
 
-        if constexpr(behavior::sequenceable<T>)
-        {
-          o->head = typed_tail->first();
-          o->tail = typed_tail->next();
-          if(o->tail == nil::nil_const())
-          {
-            o->tail = nullptr;
-          }
-          return o;
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid sequence: {}", typed_tail->to_string()) };
-        }
-      },
-      o->tail);
+    if(!bs.is_sequenceable)
+    {
+      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs.to_string(tail)) };
+    }
+
+    o->head = bs.first(tail);
+    o->tail = bs.next(tail);
+    if(o->tail == nil::nil_const())
+    {
+      o->tail = nullptr;
+    }
+    return o;
   }
 
   chunked_cons_ptr chunked_cons::next_in_place()
   {
-    return visit_object(
-      [&](auto const typed_head) -> chunked_cons_ptr {
-        using T = typename decltype(typed_head)::value_type;
+    auto const bs(object_behaviors(head));
 
-        if constexpr(behavior::chunk_like<T>)
-        {
-          if(1 < typed_head->count())
-          {
-            head = typed_head->chunk_next();
-            return this;
-          }
-          return next_in_place_non_chunked(this);
-        }
-        else
-        {
-          return next_in_place_non_chunked(this);
-        }
-      },
-      head);
+    if(!bs.is_chunk_like)
+    {
+      return next_in_place_non_chunked(this);
+    }
+
+    if(1 < bs.count(head))
+    {
+      head = bs.chunk_next(head);
+      return this;
+    }
+    return next_in_place_non_chunked(this);
   }
 
   object_ptr chunked_cons::chunked_first() const
   {
-    return visit_object(
-      [&](auto const typed_head) -> object_ptr {
-        using T = typename decltype(typed_head)::value_type;
+    if(object_behaviors(head).is_chunk_like)
+    {
+      return head;
+    }
 
-        if constexpr(behavior::chunk_like<T>)
-        {
-          return typed_head;
-        }
-        else
-        {
-          auto const buffer(make_box<chunk_buffer>(static_cast<size_t>(1)));
-          buffer->append(typed_head);
-          return buffer->chunk();
-        }
-      },
-      head);
+    auto const buffer(make_box<chunk_buffer>(static_cast<size_t>(1)));
+    buffer->append(head);
+    return buffer->chunk();
   }
 
   object_ptr chunked_cons::chunked_next() const
