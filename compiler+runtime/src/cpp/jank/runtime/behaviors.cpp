@@ -1,4 +1,5 @@
-#include <jank/runtime/object.hpp>
+#include <jank/runtime/behaviors.hpp>
+
 #include <jank/runtime/obj/nil.hpp>
 #include <jank/runtime/obj/number.hpp>
 #include <jank/runtime/obj/cons.hpp>
@@ -69,7 +70,6 @@
 #include <jank/runtime/behavior/stackable.hpp>
 #include <jank/runtime/behavior/transientable.hpp>
 #include <jank/runtime/visit.hpp>
-#include <jank/runtime/behaviors.hpp>
 
 namespace jank::runtime
 {
