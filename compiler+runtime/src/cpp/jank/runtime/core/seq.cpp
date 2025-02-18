@@ -450,20 +450,6 @@ namespace jank::runtime
     }
   }
 
-  /*
-  {
-    auto const bs(object_behaviors(m));
-    if(bs.is_associatively_readable)
-    {
-      return bs.get_default(m, key, fallback);
-    }
-    else
-    {
-      return fallback;
-    }
-  }
-  */
-
   object_ptr get_in(object_ptr m, object_ptr keys)
   {
     return get_in(m, keys, obj::nil::nil_const());
@@ -473,20 +459,18 @@ namespace jank::runtime
   {
     return visit_object(
       [&](auto const typed_m) -> object_ptr {
-        using T = typename decltype(typed_m)::value_type;
-
-        if constexpr(behavior::associatively_readable<T>)
+        if(object_behaviors(typed_m).is_associatively_readable)
         {
           return visit_object(
             [&](auto const typed_keys) -> object_ptr {
-              using T = typename decltype(typed_keys)::value_type;
-
-              if constexpr(behavior::seqable<T>)
+              if(object_behaviors(typed_keys).is_seqable)
               {
                 object_ptr ret{ typed_m };
-                for(auto seq(typed_keys->fresh_seq()); seq != nullptr; seq = next_in_place(seq))
+                for(auto seq(object_behaviors(typed_keys).fresh_seq(typed_keys)); seq != nullptr;
+                    seq = object_behaviors(seq).next_in_place(seq))
                 {
-                  ret = get(ret, seq->first());
+                  //TODO sentinel for fallback short circuiting
+                  ret = get(ret, object_behaviors(seq).first(seq));
                 }
 
                 if(ret == obj::nil::nil_const())
@@ -497,13 +481,16 @@ namespace jank::runtime
               }
               else
               {
-                throw std::runtime_error{ fmt::format("not seqable: {}", typed_keys->to_string()) };
+                throw std::runtime_error{
+                  fmt::format("not seqable: {}", object_behaviors(typed_keys).to_string(typed_keys))
+                };
               }
             },
             keys);
         }
         else
         {
+          //fallback for non-empty keys?
           return obj::nil::nil_const();
         }
       },
