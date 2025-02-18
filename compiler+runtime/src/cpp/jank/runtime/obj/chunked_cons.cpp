@@ -40,38 +40,29 @@ namespace jank::runtime::obj
   {
     auto const bs(object_behaviors(head));
 
-    if(bs.is_chunk_like)
-    {
-      return bs.nth(head, make_box(0));
-    }
-    else
+    if(!bs.is_chunk_like)
     {
       throw std::runtime_error{ fmt::format("invalid chunked cons head: {}",
                                             bs.to_string(head)) };
     }
+    return bs.nth(head, make_box(0));
   }
 
   object_ptr chunked_cons::next() const
   {
-    return visit_object(
-      [&](auto const typed_head) -> object_ptr {
-        using T = typename decltype(typed_head)::value_type;
+    auto const bs(object_behaviors(head));
 
-        if constexpr(behavior::chunk_like<T>)
-        {
-          if(1 < typed_head->count())
-          {
-            return make_box<chunked_cons>(typed_head->chunk_next(), tail);
-          }
-          return tail;
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid chunked cons head: {}",
-                                                typed_head->to_string()) };
-        }
-      },
-      head);
+    if(!bs.is_chunk_like)
+    {
+      throw std::runtime_error{ fmt::format("invalid chunked cons head: {}",
+                                            bs.to_string(head)) };
+    }
+
+    if(1 < bs.count(head))
+    {
+      return make_box<chunked_cons>(bs.chunk_next(head), tail);
+    }
+    return tail;
   }
 
   static chunked_cons_ptr next_in_place_non_chunked(chunked_cons_ptr const o)
