@@ -529,43 +529,39 @@ namespace jank::runtime
 
   object_ptr merge(object_ptr const m, object_ptr const other)
   {
-    return visit_object(
-      [&](auto const typed_m) -> object_ptr {
-        auto const m_bs(object_behaviors(typed_m));
-        if(m_bs.is_associatively_writable)
-        {
-          return visit_object(
-            [&](auto const typed_other) -> object_ptr {
-              using O = typename decltype(typed_other)::value_type;
+    auto const m_bs(object_behaviors(m));
+    if(m_bs.is_associatively_writable)
+    {
+      return visit_object(
+        [&](auto const typed_other) -> object_ptr {
+          using O = typename decltype(typed_other)::value_type;
 
-              if constexpr(std::same_as<O, obj::persistent_hash_map>
-                           || std::same_as<O, obj::persistent_array_map>
-                           || std::same_as<O, obj::transient_hash_map>
-                           //|| std::same_as<O, obj::transient_array_map>
-              )
-              {
-                object_ptr ret{ m };
-                for(auto const &pair : typed_other->data)
-                {
-                  ret = assoc(ret, pair.first, pair.second);
-                }
-                return ret;
-              }
-              else
-              {
-                throw std::runtime_error{ fmt::format("not associatively readable: {}",
-                                                      m_bs.to_string(typed_m)) };
-              }
-            },
-            other);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not associatively writable: {}",
-                                                m_bs.to_string(typed_m)) };
-        }
-      },
-      m);
+          if constexpr(std::same_as<O, obj::persistent_hash_map>
+                       || std::same_as<O, obj::persistent_array_map>
+                       || std::same_as<O, obj::transient_hash_map>
+                       //|| std::same_as<O, obj::transient_array_map>
+          )
+          {
+            object_ptr ret{ m };
+            for(auto const &pair : typed_other->data)
+            {
+              ret = assoc(ret, pair.first, pair.second);
+            }
+            return ret;
+          }
+          else
+          {
+            throw std::runtime_error{ fmt::format("not associatively readable: {}",
+                                                  m_bs.to_string(m)) };
+          }
+        },
+        other);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not associatively writable: {}",
+                                            m_bs.to_string(m)) };
+    }
   }
 
   object_ptr subvec(object_ptr const o, native_integer const start, native_integer const end)
