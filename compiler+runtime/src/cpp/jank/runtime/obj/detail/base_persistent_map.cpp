@@ -1,6 +1,4 @@
 #include <jank/runtime/obj/detail/base_persistent_map.hpp>
-#include <jank/runtime/behavior/associatively_readable.hpp>
-#include <jank/runtime/behavior/map_like.hpp>
 #include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/core/to_string.hpp>
 #include <jank/runtime/obj/persistent_array_map.hpp>
