@@ -657,15 +657,20 @@ namespace jank::runtime
 
   object_ptr empty(object_ptr const o)
   {
-    auto const bs(object_behaviors(o));
-    if(bs.is_collection_like)
-    {
-      return bs.empty(o);
-    }
-    else
-    {
-      return obj::nil::nil_const();
-    }
+    return visit_object(
+      [=](auto const typed_o) -> object_ptr {
+        using T = typename decltype(typed_o)::value_type;
+
+        if constexpr(behavior::collection_like<T>)
+        {
+          return T::empty();
+        }
+        else
+        {
+          return obj::nil::nil_const();
+        }
+      },
+      o);
   }
 
   native_persistent_string str(object_ptr const o, object_ptr const args)

@@ -62,6 +62,12 @@ namespace jank::runtime::obj
       seq));
   }
 
+  object_ptr persistent_sorted_map::create_empty() const
+  {
+    static auto const ret(empty());
+    return meta.map_or(ret, [&](auto const m) { return ret->with_meta(m); });
+  }
+
   object_ptr persistent_sorted_map::get(object_ptr const key) const
   {
     auto const res(data.find(key));
