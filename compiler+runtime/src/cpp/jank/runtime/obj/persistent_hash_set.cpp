@@ -1,6 +1,5 @@
 #include <jank/runtime/obj/persistent_hash_set.hpp>
 #include <jank/runtime/behaviors.hpp>
-#include <jank/runtime/core/seq.hpp>
 #include <jank/runtime/core/to_string.hpp>
 #include <jank/runtime/obj/nil.hpp>
 #include <jank/runtime/obj/persistent_hash_set_sequence.hpp>
@@ -54,7 +53,7 @@ namespace jank::runtime::obj
     //TODO next_in_place / first perf
     for(auto it(bs.fresh_seq(seq)); it != nullptr; it = object_behaviors(it).next_in_place(it))
     {
-      transient.insert(runtime::first(it));
+      transient.insert(object_behaviors(it).first(it));
     }
     return make_box<persistent_hash_set>(transient.persistent());
   }
