@@ -148,6 +148,12 @@ namespace jank::runtime::obj
     return ret;
   }
 
+  object_ptr persistent_list::create_empty() const
+  {
+    static auto const ret(empty());
+    return meta.map_or(ret, [&](auto const m) { return ret->with_meta(m); });
+  }
+
   object_ptr persistent_list::peek() const
   {
     return data.first().unwrap_or(nil::nil_const());

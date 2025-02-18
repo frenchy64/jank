@@ -60,6 +60,12 @@ namespace jank::runtime::obj
       s);
   }
 
+  object_ptr persistent_vector::create_empty() const
+  {
+    static auto const ret(empty());
+    return meta.map_or(ret, [&](auto const m) { return ret->with_meta(m); });
+  }
+
   persistent_vector_ptr persistent_vector::empty()
   {
     static auto const ret(make_box<persistent_vector>());

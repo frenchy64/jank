@@ -39,6 +39,7 @@ namespace jank::runtime::obj
     }
 
     static persistent_hash_set_ptr empty();
+    object_ptr create_empty() const;
 
     static persistent_hash_set_ptr create_from_seq(object_ptr const seq);
 

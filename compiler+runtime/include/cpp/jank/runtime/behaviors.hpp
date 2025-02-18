@@ -97,6 +97,9 @@ namespace jank::runtime
     std::function<native_persistent_string(object_ptr const)> get_name{};
     std::function<native_persistent_string(object_ptr const)> get_namespace{};
 
+    /* behavior::collection_like */
+    std::function<object_ptr(object_ptr const)> empty{};
+
     /* behavior::stackable */
     std::function<object_ptr(object_ptr const)> peek{};
     std::function<object_ptr(object_ptr const)> pop{};

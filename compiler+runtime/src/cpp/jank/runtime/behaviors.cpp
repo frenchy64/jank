@@ -111,6 +111,7 @@ namespace jank::runtime
     if constexpr(behavior::collection_like<T>)
     {
       this->is_collection = true;
+      this->empty = [](object_ptr const c) { return try_object<T>(c)->create_empty(); };
     }
     if constexpr(behavior::associatively_readable<T> && behavior::associatively_writable<T>)
     {

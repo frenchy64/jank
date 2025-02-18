@@ -120,6 +120,12 @@ namespace jank::runtime::obj
     return make_box<persistent_hash_map>(meta, std::move(copy));
   }
 
+  object_ptr persistent_hash_map::create_empty() const
+  {
+    static auto const ret(empty());
+    return meta.map_or(ret, [&](auto const m) { return ret->with_meta(m); });
+  }
+
   persistent_hash_map_ptr persistent_hash_map::conj(object_ptr const head) const
   {
     if(head->type == object_type::persistent_array_map

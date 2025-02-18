@@ -44,6 +44,8 @@ namespace jank::runtime::obj
       return ret;
     }
 
+    object_ptr create_empty() const;
+
     static persistent_sorted_set_ptr create_from_seq(object_ptr const seq);
 
     /* behavior::object_like */

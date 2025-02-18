@@ -22,6 +22,11 @@ namespace jank::runtime::obj
   {
   }
 
+  object_ptr transient_hash_set::create_empty() const
+  {
+    return empty();
+  }
+
   transient_hash_set_ptr transient_hash_set::empty()
   {
     return make_box<transient_hash_set>();

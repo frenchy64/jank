@@ -14,5 +14,8 @@ namespace jank::runtime::behavior
   concept collection_like = requires(T * const t) {
     /* Returns an empty collection of the same type. */
     { T::empty() } -> std::convertible_to<object_ptr>;
+
+    /* Returns an empty collection of the same type with the same metadata. */
+    { t->empty() } -> std::convertible_to<object_ptr>;
   } && seqable<T> && conjable<T>;
 }

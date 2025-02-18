@@ -26,6 +26,11 @@ namespace jank::runtime::obj
   {
   }
 
+  object_ptr transient_sorted_map::create_empty() const
+  {
+    return empty();
+  }
+
   transient_sorted_map_ptr transient_sorted_map::empty()
   {
     return make_box<transient_sorted_map>();

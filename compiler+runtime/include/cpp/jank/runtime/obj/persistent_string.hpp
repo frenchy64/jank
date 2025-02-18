@@ -19,12 +19,6 @@ namespace jank::runtime::obj
     persistent_string(native_persistent_string const &d);
     persistent_string(native_persistent_string &&d);
 
-    static persistent_string_ptr empty()
-    {
-      static auto const ret(make_box<persistent_string>());
-      return ret;
-    }
-
     /* behavior::object_like */
     native_bool equal(object const &) const;
     native_persistent_string const &to_string() const;

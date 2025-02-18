@@ -99,6 +99,12 @@ namespace jank::runtime::obj
     return fresh_seq();
   }
 
+  object_ptr persistent_sorted_set::create_empty() const
+  {
+    static auto const ret(empty());
+    return meta.map_or(ret, [&](auto const m) { return ret->with_meta(m); });
+  }
+
   persistent_sorted_set_sequence_ptr persistent_sorted_set::fresh_seq() const
   {
     if(data.empty())

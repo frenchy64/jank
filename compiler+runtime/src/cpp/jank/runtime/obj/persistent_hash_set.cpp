@@ -32,6 +32,12 @@ namespace jank::runtime::obj
     return ret;
   }
 
+  object_ptr persistent_hash_set::create_empty() const
+  {
+    static auto const ret(empty());
+    return meta.map_or(ret, [&](auto const m) { return ret->with_meta(m); });
+  }
+
   persistent_hash_set_ptr persistent_hash_set::create_from_seq(object_ptr const seq)
   {
     return make_box<persistent_hash_set>(visit_seqable(
