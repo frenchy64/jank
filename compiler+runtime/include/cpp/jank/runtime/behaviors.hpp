@@ -57,7 +57,7 @@ namespace jank::runtime
     std::function<object(object_ptr const)> base{};
 
     /* behavior::comparable */
-    std::function<native_bool(object_ptr const, object_ptr const)> compare{};
+    std::function<native_integer(object_ptr const, object_ptr const)> compare{};
 
     /* behavior::number_like */
     std::function<native_integer(object_ptr const o)> to_integer{};
