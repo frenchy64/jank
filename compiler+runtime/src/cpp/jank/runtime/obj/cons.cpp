@@ -3,6 +3,7 @@
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/obj/cons.hpp>
 #include <jank/runtime/core.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/visit.hpp>
 
 namespace jank::runtime::obj
@@ -46,25 +47,17 @@ namespace jank::runtime::obj
       return nullptr;
     }
 
-    visit_object(
-      [&](auto const typed_tail) {
-        using T = typename decltype(typed_tail)::value_type;
-
-        if constexpr(behavior::sequenceable<T>)
-        {
-          head = typed_tail->first();
-          tail = typed_tail->next();
-          if(tail == nil::nil_const())
-          {
-            tail = nullptr;
-          }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid sequence: {}", typed_tail->to_string()) };
-        }
-      },
-      tail);
+    auto const bs(object_behaviors(tail));
+    if(!bs.is_sequenceable)
+    {
+      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs.to_string(tail)) };
+    }
+    head = bs.first(tail);
+    tail = bs.next(tail);
+    if(tail == nil::nil_const())
+    {
+      tail = nullptr;
+    }
 
     return this;
   }
