@@ -834,42 +834,41 @@ namespace jank::read::parse
       return obj::nil::nil_const();
     }
 
-    return visit_seqable(
-      [this](auto const typed_seq) -> result<object_ptr, error_ptr> {
-        runtime::detail::native_transient_vector ret;
-        for(auto it(typed_seq->fresh_seq()); it != nullptr; it = next_in_place(it))
-        {
-          auto const item(it->first());
+    auto const bs(object_behaviors(seq));
+    if(!bs.is_seqable)
+    {
+      return err(error::internal_parse_failure("syntax_quote_expand_seq arg not seqable"));
+    }
 
-          if(syntax_quote_is_unquote(item, false))
-          {
-            ret.push_back(make_box<obj::persistent_list>(std::in_place,
-                                                         make_box<obj::symbol>("clojure.core/list"),
-                                                         second(item)));
-          }
-          else if(syntax_quote_is_unquote(item, true))
-          {
-            ret.push_back(second(item));
-          }
-          else
-          {
-            auto quoted_item(syntax_quote(item));
-            if(quoted_item.is_err())
-            {
-              return quoted_item;
-            }
-            ret.push_back(make_box<obj::persistent_list>(std::in_place,
-                                                         make_box<obj::symbol>("clojure.core/list"),
-                                                         quoted_item.expect_ok()));
-          }
+    runtime::detail::native_transient_vector ret;
+    for(auto it(bs.fresh_seq(seq)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    {
+      auto const item(object_behaviors(it).first(it));
+
+      if(syntax_quote_is_unquote(item, false))
+      {
+        ret.push_back(make_box<obj::persistent_list>(std::in_place,
+                                                     make_box<obj::symbol>("clojure.core/list"),
+                                                     second(item)));
+      }
+      else if(syntax_quote_is_unquote(item, true))
+      {
+        ret.push_back(second(item));
+      }
+      else
+      {
+        auto quoted_item(syntax_quote(item));
+        if(quoted_item.is_err())
+        {
+          return quoted_item;
         }
-        auto const vec(make_box<obj::persistent_vector>(ret.persistent())->seq());
-        return vec ?: obj::nil::nil_const();
-      },
-      []() -> result<object_ptr, error_ptr> {
-        return err(error::internal_parse_failure("syntax_quote_expand_seq arg not seqable"));
-      },
-      seq);
+        ret.push_back(make_box<obj::persistent_list>(std::in_place,
+                                                     make_box<obj::symbol>("clojure.core/list"),
+                                                     quoted_item.expect_ok()));
+      }
+    }
+    auto const vec(make_box<obj::persistent_vector>(ret.persistent())->seq());
+    return vec ?: obj::nil::nil_const();
   }
 
   result<object_ptr, error_ptr> processor::syntax_quote_flatten_map(object_ptr const seq)
