@@ -14,7 +14,15 @@
 #include <jank/read/lex.hpp>
 #include <jank/read/parse.hpp>
 #include <jank/runtime/context.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/obj/cons.hpp>
+#include <jank/runtime/obj/keyword.hpp>
+#include <jank/runtime/obj/symbol.hpp>
+#include <jank/runtime/obj/persistent_sorted_set.hpp>
+#include <jank/runtime/obj/persistent_hash_map.hpp>
+#include <jank/runtime/obj/atom.hpp>
+#include <jank/runtime/var.hpp>
+#include <jank/runtime/rtti.hpp>
+#include <jank/runtime/behavior/callable.hpp>
 #include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/runtime/core/munge.hpp>
