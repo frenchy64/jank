@@ -921,22 +921,19 @@ namespace jank::runtime
 
   object_ptr shuffle(object_ptr const coll)
   {
-    return visit_seqable(
-      [](auto const typed_coll) -> object_ptr {
-        native_vector<object_ptr> vec;
-        for(auto it(typed_coll->fresh_seq()); it != nullptr; it = it->next_in_place())
-        {
-          vec.push_back(it->first());
-        }
+    auto const bs(object_behaviors(coll));
+    native_vector<object_ptr> vec;
+    //TODO next_in_place / first perf
+    for(auto it(bs.fresh_seq(coll)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    {
+      vec.push_back(object_behaviors(it).first(it));
+    }
 
-        static std::random_device rd;
-        std::mt19937 g(rd());
-        std::shuffle(vec.begin(), vec.end(), g);
+    static std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(vec.begin(), vec.end(), g);
 
-        return make_box<obj::persistent_vector>(
-          runtime::detail::native_persistent_vector{ vec.begin(), vec.end() });
-      },
-      coll);
+    return make_box<obj::persistent_vector>(
+      runtime::detail::native_persistent_vector{ vec.begin(), vec.end() });
   }
-
 }
