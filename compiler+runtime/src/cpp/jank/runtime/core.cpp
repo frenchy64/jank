@@ -2,8 +2,21 @@
 
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/core.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/rtti.hpp>
+#include <jank/runtime/obj/atom.hpp>
+#include <jank/runtime/obj/character.hpp>
+#include <jank/runtime/obj/cons.hpp>
+#include <jank/runtime/obj/delay.hpp>
+#include <jank/runtime/obj/keyword.hpp>
+#include <jank/runtime/obj/nil.hpp>
+#include <jank/runtime/obj/number.hpp>
+#include <jank/runtime/obj/persistent_hash_map.hpp>
+#include <jank/runtime/obj/persistent_string.hpp>
+#include <jank/runtime/obj/symbol.hpp>
+#include <jank/runtime/obj/tagged_literal.hpp>
+#include <jank/runtime/obj/volatile.hpp>
 #include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/behavior/callable.hpp>
 #include <jank/runtime/behavior/comparable.hpp>
 #include <jank/runtime/behavior/nameable.hpp>
 #include <jank/runtime/behavior/derefable.hpp>
