@@ -4,17 +4,28 @@
 #include <utility>
 
 #include <jank/c_api.h>
-#include <jank/runtime/visit.hpp> //FIXME remove, started replacing below vvv
-#include <jank/runtime/behaviors.hpp>
+
+#include <jank/profile/time.hpp>
 #include <jank/runtime/behavior/callable.hpp>
-#include <jank/runtime/obj/jit_closure.hpp>
-#include <jank/runtime/obj/jit_function.hpp>
-#include <jank/runtime/obj/transient_vector.hpp>
-#include <jank/runtime/obj/transient_hash_map.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/context.hpp>
 #include <jank/runtime/core.hpp>
+#include <jank/runtime/core/to_string.hpp>
+#include <jank/runtime/obj/character.hpp>
+#include <jank/runtime/obj/jit_closure.hpp>
+#include <jank/runtime/obj/jit_function.hpp>
+#include <jank/runtime/obj/keyword.hpp>
+#include <jank/runtime/obj/nil.hpp>
+#include <jank/runtime/obj/persistent_hash_set.hpp>
+#include <jank/runtime/obj/persistent_hash_map.hpp>
+#include <jank/runtime/obj/persistent_list.hpp>
+#include <jank/runtime/obj/persistent_string.hpp>
+#include <jank/runtime/obj/symbol.hpp>
+#include <jank/runtime/obj/transient_hash_map.hpp>
+#include <jank/runtime/obj/transient_hash_set.hpp>
+#include <jank/runtime/obj/transient_vector.hpp>
+#include <jank/runtime/object.hpp>
 #include <jank/runtime/rtti.hpp>
-#include <jank/profile/time.hpp>
 #include <jank/util/scope_exit.hpp>
 
 using namespace jank;

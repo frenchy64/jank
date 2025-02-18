@@ -70,8 +70,7 @@ namespace jank::runtime::obj
     for(object_ptr it(fresh_seq()); it != nullptr;
         it = object_behaviors(it).next_in_place(it), seq = object_behaviors(seq).next_in_place(seq))
     {
-      if(seq == nullptr
-         || !runtime::equal(object_behaviors(it).first(it), object_behaviors(seq).first(seq)))
+      if(seq == nullptr || !runtime::equal(object_behaviors(it).first(it), object_behaviors(seq).first(seq)))
       {
         return false;
       }
