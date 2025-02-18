@@ -696,42 +696,12 @@ namespace jank::runtime
 
   obj::persistent_list_ptr list(object_ptr const s)
   {
-    return visit_seqable(
-      [](auto const typed_s) -> obj::persistent_list_ptr {
-        return obj::persistent_list::create(typed_s);
-      },
-      s);
-    /*
-    auto const bs(object_behaviors(s));
-    if(bs.is_seqable)
-    {
-      return obj::persistent_list::create(s);
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
-    }
-    */
+    return obj::persistent_list::create(s);
   }
 
   obj::persistent_vector_ptr vec(object_ptr const s)
   {
-    return visit_seqable(
-      [](auto const typed_s) -> obj::persistent_vector_ptr {
-        return obj::persistent_vector::create(typed_s);
-      },
-      s);
-    /*
-    auto const bs(object_behaviors(s));
-    if(bs.is_seqable)
-    {
-      return obj::persistent_vector::create(s);
-    }
-    else
-    {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
-    }
-    */
+    return obj::persistent_vector::create(s);
   }
 
   size_t sequence_length(object_ptr const s)
