@@ -532,35 +532,27 @@ namespace jank::runtime
     auto const m_bs(object_behaviors(m));
     if(m_bs.is_associatively_writable)
     {
-      return visit_object(
-        [&](auto const typed_other) -> object_ptr {
-          using O = typename decltype(typed_other)::value_type;
-
-          if constexpr(std::same_as<O, obj::persistent_hash_map>
-                       || std::same_as<O, obj::persistent_array_map>
-                       || std::same_as<O, obj::transient_hash_map>
-                       //|| std::same_as<O, obj::transient_array_map>
-          )
-          {
-            object_ptr ret{ m };
-            for(auto const &pair : typed_other->data)
-            {
-              ret = assoc(ret, pair.first, pair.second);
-            }
-            return ret;
-          }
-          else
-          {
-            throw std::runtime_error{ fmt::format("not associatively readable: {}",
-                                                  m_bs.to_string(m)) };
-          }
-        },
-        other);
+      auto const other_bs(object_behaviors(other));
+      if(other_bs.is_map)
+      {
+        object_ptr ret{ m };
+        //TODO next_in_place / first / kv perf
+        for(auto it = other_bs.fresh_seq(other); it != nullptr;
+            it = object_behaviors(it).next_in_place(it))
+        {
+          ret = conj(ret, object_behaviors(it).first(it));
+        }
+        return ret;
+      }
+      else
+      {
+        throw std::runtime_error{ fmt::format("not associatively readable: {}",
+                                              m_bs.to_string(m)) };
+      }
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not associatively writable: {}",
-                                            m_bs.to_string(m)) };
+      throw std::runtime_error{ fmt::format("not associatively writable: {}", m_bs.to_string(m)) };
     }
   }
 
