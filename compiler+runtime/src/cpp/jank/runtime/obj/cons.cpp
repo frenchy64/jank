@@ -4,7 +4,7 @@
 #include <jank/runtime/obj/cons.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/runtime/behaviors.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
 
 namespace jank::runtime::obj
 {
@@ -72,7 +72,7 @@ namespace jank::runtime::obj
 
     auto seq(bs.fresh_seq(&o));
     //TODO next_in_place / first perf
-    for(auto it(fresh_seq()); it != nullptr;
+    for(object_ptr it(fresh_seq()); it != nullptr;
         it = object_behaviors(it).next_in_place(it), seq = object_behaviors(seq).next_in_place(seq))
     {
       if(seq == nullptr
