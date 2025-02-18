@@ -784,23 +784,23 @@ namespace jank::runtime
 
   object_ptr reduce(object_ptr const f, object_ptr const init, object_ptr const s)
   {
-    return visit_seqable(
-      [](auto const typed_coll, object_ptr const f, object_ptr const init) -> object_ptr {
-        object_ptr res{ init };
-        for(auto it(typed_coll->fresh_seq()); it != nullptr; it = it->next_in_place())
-        {
-          res = dynamic_call(f, res, it->first());
-          if(res->type == object_type::reduced)
-          {
-            res = expect_object<obj::reduced>(res)->val;
-            break;
-          }
-        }
-        return res;
-      },
-      s,
-      f,
-      init);
+    auto const bs(object_behaviors(s));
+    if(!bs.is_seqable)
+    {
+      throw std::runtime_error{ "not seqable: " + bs.to_code_string(s) };
+    }
+    object_ptr res{ init };
+    //TODO next_in_place / first perf
+    for(auto it(bs.fresh_seq(s)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    {
+      res = dynamic_call(f, res, object_behaviors(it).first(it));
+      if(res->type == object_type::reduced)
+      {
+        res = expect_object<obj::reduced>(res)->val;
+        break;
+      }
+    }
+    return res;
   }
 
   object_ptr reduced(object_ptr const o)
