@@ -245,6 +245,7 @@ add_library(
   src/cpp/clojure/core_native.cpp
   src/cpp/jank/compiler_native.cpp
   src/cpp/jank/perf_native.cpp
+  src/cpp/jank/coz_native.cpp
 )
 
 target_include_directories(
