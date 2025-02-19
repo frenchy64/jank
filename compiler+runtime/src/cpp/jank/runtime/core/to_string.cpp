@@ -6,7 +6,7 @@ namespace jank::runtime
 {
   native_persistent_string to_string(object const * const o)
   {
-    return object_behaviors(o).to_string(o);
+    return behaviors(o)->to_string(o);
   }
 
   void to_string(char const ch, util::string_builder &buff)
@@ -16,12 +16,12 @@ namespace jank::runtime
 
   void to_string(object_ptr const o, util::string_builder &buff)
   {
-    return object_behaviors(o).to_string_builder(o, buff);
+    return behaviors(o)->to_string_builder(o, buff);
   }
 
   native_persistent_string to_code_string(object const * const o)
   {
-    return object_behaviors(o).to_code_string(o);
+    return behaviors(o)->to_code_string(o);
   }
 
   void to_code_string(char const ch, util::string_builder &buff)
@@ -31,6 +31,6 @@ namespace jank::runtime
 
   void to_code_string(object_ptr const o, util::string_builder &buff)
   {
-    buff(object_behaviors(o).to_code_string(o));
+    buff(behaviors(o)->to_code_string(o));
   }
 }

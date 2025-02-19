@@ -43,27 +43,27 @@ namespace jank::runtime::obj
 
   object_ptr chunked_cons::first() const
   {
-    auto const bs(object_behaviors(head));
+    auto const bs(behaviors(head));
 
-    if(!bs.is_chunk_like)
+    if(!bs->is_chunk_like)
     {
-      throw std::runtime_error{ fmt::format("invalid chunked cons head: {}", bs.to_string(head)) };
+      throw std::runtime_error{ fmt::format("invalid chunked cons head: {}", bs->to_string(head)) };
     }
-    return bs.nth(head, make_box(0));
+    return bs->nth(head, make_box(0));
   }
 
   object_ptr chunked_cons::next() const
   {
-    auto const bs(object_behaviors(head));
+    auto const bs(behaviors(head));
 
-    if(!bs.is_chunk_like)
+    if(!bs->is_chunk_like)
     {
-      throw std::runtime_error{ fmt::format("invalid chunked cons head: {}", bs.to_string(head)) };
+      throw std::runtime_error{ fmt::format("invalid chunked cons head: {}", bs->to_string(head)) };
     }
 
-    if(1 < bs.count(head))
+    if(1 < bs->count(head))
     {
-      return make_box<chunked_cons>(bs.chunk_next(head), tail);
+      return make_box<chunked_cons>(bs->chunk_next(head), tail);
     }
     return tail;
   }
@@ -76,15 +76,15 @@ namespace jank::runtime::obj
     }
 
     auto const tail(o->tail);
-    auto const bs(object_behaviors(tail));
+    auto const bs(behaviors(tail));
 
-    if(!bs.is_sequenceable)
+    if(!bs->is_sequenceable)
     {
-      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs.to_string(tail)) };
+      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs->to_string(tail)) };
     }
 
-    o->head = bs.first(tail);
-    o->tail = bs.next(tail);
+    o->head = bs->first(tail);
+    o->tail = bs->next(tail);
     if(o->tail == nil::nil_const())
     {
       o->tail = nullptr;
@@ -94,16 +94,16 @@ namespace jank::runtime::obj
 
   chunked_cons_ptr chunked_cons::next_in_place()
   {
-    auto const bs(object_behaviors(head));
+    auto const bs(behaviors(head));
 
-    if(!bs.is_chunk_like)
+    if(!bs->is_chunk_like)
     {
       return next_in_place_non_chunked(this);
     }
 
-    if(1 < bs.count(head))
+    if(1 < bs->count(head))
     {
-      head = bs.chunk_next(head);
+      head = bs->chunk_next(head);
       return this;
     }
     return next_in_place_non_chunked(this);
@@ -111,7 +111,7 @@ namespace jank::runtime::obj
 
   object_ptr chunked_cons::chunked_first() const
   {
-    if(object_behaviors(head).is_chunk_like)
+    if(behaviors(head)->is_chunk_like)
     {
       return head;
     }
@@ -128,18 +128,18 @@ namespace jank::runtime::obj
 
   native_bool chunked_cons::equal(object const &o) const
   {
-    auto const bs(object_behaviors(&o));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(&o));
+    if(!bs->is_seqable)
     {
       return false;
     }
-    auto seq(bs.fresh_seq(&o));
+    auto seq(bs->fresh_seq(&o));
     //TODO next_in_place / first perf
     for(object_ptr it(fresh_seq()); it != nullptr;
-        it = object_behaviors(it).next_in_place(it), seq = object_behaviors(seq).next_in_place(seq))
+        it = behaviors(it)->next_in_place(it), seq = behaviors(seq)->next_in_place(seq))
     {
       if(seq == nullptr
-         || !runtime::equal(object_behaviors(it).first(it), object_behaviors(seq).first(seq)))
+         || !runtime::equal(behaviors(it)->first(it), behaviors(seq)->first(seq)))
       {
         return false;
       }

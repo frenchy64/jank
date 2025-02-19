@@ -487,8 +487,8 @@ namespace jank::read::parse
           latest_token
         };
       }
-      auto const bs(object_behaviors(val));
-      if(bs.is_map)
+      auto const bs(behaviors(val));
+      if(bs->is_map)
       {
         return object_source_info{ val, start_token, latest_token };
       }
@@ -514,13 +514,13 @@ namespace jank::read::parse
     }
 
     auto const res(target_val_result.expect_ok().unwrap().ptr);
-    auto const bs(object_behaviors(res));
+    auto const bs(behaviors(res));
 
-    if(bs.is_metadatable)
+    if(bs->is_metadatable)
     {
-      auto const m(bs.get_meta(res));
+      auto const m(bs->get_meta(res));
       auto const mr(meta_result.expect_ok().unwrap().ptr);
-      return object_source_info{ bs.with_meta(res, is_nil(m) ? mr : merge(m, mr)),
+      return object_source_info{ bs->with_meta(res, is_nil(m) ? mr : merge(m, mr)),
                                  start_token,
                                  latest_token };
     }
@@ -794,28 +794,28 @@ namespace jank::read::parse
           }
 
           auto const s(next_in_place(it)->first());
-          auto const s_bs(object_behaviors(s));
-          if(!s_bs.is_seqable)
+          auto const s_bs(behaviors(s));
+          if(!s_bs->is_seqable)
           {
             /* TODO: Get the source of just this form. */
             return error::parse_invalid_reader_splice({ start_token.start, latest_token.end },
                                                       "#?@ must be used on a sequence");
           }
-          auto const seq(s_bs.fresh_seq(s));
+          auto const seq(s_bs->fresh_seq(s));
           if(!seq)
           {
             return ok(none);
           }
 
-          auto const seq_bs(object_behaviors(seq));
-          auto const first(seq_bs.first(seq));
+          auto const seq_bs(behaviors(seq));
+          auto const first(seq_bs->first(seq));
 
           auto const front(pending_forms.begin());
           //TODO next_in_place / first perf
-          for(auto it(seq_bs.next_in_place(seq)); it != nullptr;
-              it = object_behaviors(it).next_in_place(it))
+          for(auto it(seq_bs->next_in_place(seq)); it != nullptr;
+              it = behaviors(it)->next_in_place(it))
           {
-            pending_forms.insert(front, object_behaviors(it).first(it));
+            pending_forms.insert(front, behaviors(it)->first(it));
           }
 
           return object_source_info{ first, start_token, list_end };
@@ -839,16 +839,16 @@ namespace jank::read::parse
       return obj::nil::nil_const();
     }
 
-    auto const bs(object_behaviors(seq));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(seq));
+    if(!bs->is_seqable)
     {
       return err(error::internal_parse_failure("syntax_quote_expand_seq arg not seqable"));
     }
 
     runtime::detail::native_transient_vector ret;
-    for(auto it(bs.fresh_seq(seq)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    for(auto it(bs->fresh_seq(seq)); it != nullptr; it = behaviors(it)->next_in_place(it))
     {
-      auto const item(object_behaviors(it).first(it));
+      auto const item(behaviors(it)->first(it));
 
       if(syntax_quote_is_unquote(item, false))
       {
@@ -883,16 +883,16 @@ namespace jank::read::parse
       return obj::nil::nil_const();
     }
 
-    auto const bs(object_behaviors(seq));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(seq));
+    if(!bs->is_seqable)
     {
       return err(error::internal_parse_failure("syntax_quote_flatten_map arg is not a seq"));
     }
 
     runtime::detail::native_transient_vector ret;
-    for(auto it(bs.fresh_seq(seq)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    for(auto it(bs->fresh_seq(seq)); it != nullptr; it = behaviors(it)->next_in_place(it))
     {
-      auto item(object_behaviors(it).first(it));
+      auto item(behaviors(it)->first(it));
       ret.push_back(first(item));
       ret.push_back(second(item));
     }
@@ -902,13 +902,13 @@ namespace jank::read::parse
 
   native_bool processor::syntax_quote_is_unquote(object_ptr const form, native_bool const splice)
   {
-    auto const bs(object_behaviors(form));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(form));
+    if(!bs->is_seqable)
     {
       return false;
     }
     object_ptr item{};
-    auto const s(bs.seq(form));
+    auto const s(bs->seq(form));
     if(!s)
     {
       item = obj::nil::nil_const();
@@ -988,15 +988,15 @@ namespace jank::read::parse
       /* Handle all sorts of sequences. We do this by recursively walking through them,
        * flattening them, qualifying the symbols, and then building up code which will
        * reassemble them. */
-      auto const bs(object_behaviors(form));
+      auto const bs(behaviors(form));
 
       /* For anything else, do nothing special aside from quoting. Hopefully that works. */
-      if(!bs.is_seqable)
+      if(!bs->is_seqable)
       {
         return make_box<obj::persistent_list>(std::in_place, make_box<obj::symbol>("quote"), form);
       }
 
-      auto const seq(bs.seq(form));
+      auto const seq(bs->seq(form));
       if(form->type == object_type::persistent_vector)
       {
         auto expanded(syntax_quote_expand_seq(seq));
@@ -1014,7 +1014,7 @@ namespace jank::read::parse
             make_box<obj::symbol>("clojure.core/seq"),
             conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat"))));
       }
-      if(bs.is_map)
+      if(bs->is_map)
       {
         auto flattened(syntax_quote_flatten_map(seq));
         if(flattened.is_err())
@@ -1037,7 +1037,7 @@ namespace jank::read::parse
             make_box<obj::symbol>("clojure.core/seq"),
             conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat"))));
       }
-      if(bs.is_set)
+      if(bs->is_set)
       {
         return err(error::internal_parse_failure("nyi: set"));
       }
@@ -1065,7 +1065,7 @@ namespace jank::read::parse
       else
       {
         return err(error::internal_parse_failure(
-          fmt::format("Unsupported collection type: {}", object_type_str(bs.base(seq).type))));
+          fmt::format("Unsupported collection type: {}", object_type_str(bs->base(seq).type))));
       }
     }
   }

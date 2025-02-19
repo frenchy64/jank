@@ -44,14 +44,14 @@ namespace jank::runtime::obj
       return make_box<persistent_vector>();
     }
 
-    auto const bs(object_behaviors(s));
-    if(!bs.is_sequenceable)
+    auto const bs(behaviors(s));
+    if(!bs->is_sequenceable)
     {
-      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs.to_string(s)) };
+      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs->to_string(s)) };
     }
 
     runtime::detail::native_transient_vector v;
-    for(auto i(bs.fresh_seq(s)); i != nullptr; i = object_behaviors(i).next_in_place(i))
+    for(auto i(bs->fresh_seq(s)); i != nullptr; i = behaviors(i)->next_in_place(i))
     {
       v.push_back(runtime::first(i));
     }
@@ -93,14 +93,14 @@ namespace jank::runtime::obj
     }
     else
     {
-      auto const bs(object_behaviors(&o));
-      if(!bs.is_sequential)
+      auto const bs(behaviors(&o));
+      if(!bs->is_sequential)
       {
         return false;
       }
       size_t i{};
-      auto e(bs.fresh_seq(&o));
-      for(; e != nullptr; e = object_behaviors(e).next_in_place(e))
+      auto e(bs->fresh_seq(&o));
+      for(; e != nullptr; e = behaviors(e)->next_in_place(e))
       {
         if(!runtime::equal(data[i], runtime::first(e)))
         {
@@ -109,7 +109,7 @@ namespace jank::runtime::obj
 
         if(++i == data.size())
         {
-          e = object_behaviors(e).next_in_place(e);
+          e = behaviors(e)->next_in_place(e);
           break;
         }
       }

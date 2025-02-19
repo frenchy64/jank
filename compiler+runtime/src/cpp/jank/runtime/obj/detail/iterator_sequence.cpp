@@ -33,17 +33,17 @@ namespace jank::runtime::obj::detail
   template <typename Derived, typename It>
   native_bool iterator_sequence<Derived, It>::equal(object const &o) const
   {
-    auto const bs(object_behaviors(&o));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(&o));
+    if(!bs->is_seqable)
     {
       return false;
     }
 
-    auto seq(bs.fresh_seq(&o));
+    auto seq(bs->fresh_seq(&o));
     //TODO next_in_place / first perf
-    for(auto it(begin); it != end; ++it, seq = object_behaviors(seq).next_in_place(seq))
+    for(auto it(begin); it != end; ++it, seq = behaviors(seq)->next_in_place(seq))
     {
-      if(seq == nullptr || !runtime::equal(*it, object_behaviors(seq).first(seq)))
+      if(seq == nullptr || !runtime::equal(*it, behaviors(seq)->first(seq)))
       {
         return false;
       }

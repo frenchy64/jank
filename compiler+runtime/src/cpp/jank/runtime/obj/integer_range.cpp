@@ -134,20 +134,20 @@ namespace jank::runtime::obj
 
   native_bool integer_range::equal(object const &o) const
   {
-    auto const bs(object_behaviors(&o));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(&o));
+    if(!bs->is_seqable)
     {
       return false;
     }
 
-    auto seq(bs.fresh_seq(&o));
+    auto seq(bs->fresh_seq(&o));
     /* TODO: This is common code; can it be shared? */
     // TODO next_in_place / first perf
     for(object_ptr it(fresh_seq()); it != nullptr;
-        it = object_behaviors(it).next_in_place(it), seq = object_behaviors(seq).next_in_place(seq))
+        it = behaviors(it)->next_in_place(it), seq = behaviors(seq)->next_in_place(seq))
     {
       if(seq == nullptr
-         || !runtime::equal(object_behaviors(it).first(it), object_behaviors(seq).first(seq)))
+         || !runtime::equal(behaviors(it)->first(it), behaviors(seq)->first(seq)))
       {
         return false;
       }

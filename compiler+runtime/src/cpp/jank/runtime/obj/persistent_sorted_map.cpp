@@ -36,23 +36,23 @@ namespace jank::runtime::obj
 
   persistent_sorted_map_ptr persistent_sorted_map::create_from_seq(object_ptr const seq)
   {
-    auto const bs(object_behaviors(seq));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(seq));
+    if(!bs->is_seqable)
     {
-      throw std::runtime_error{ fmt::format("Not seqable: {}", bs.to_string(seq)) };
+      throw std::runtime_error{ fmt::format("Not seqable: {}", bs->to_string(seq)) };
     }
 
     runtime::detail::native_transient_sorted_map transient;
     //TODO next_in_place / first perf
-    for(auto it(bs.fresh_seq(seq)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    for(auto it(bs->fresh_seq(seq)); it != nullptr; it = behaviors(it)->next_in_place(it))
     {
-      auto const key(object_behaviors(it).first(it));
-      it = object_behaviors(it).next_in_place(it);
+      auto const key(behaviors(it)->first(it));
+      it = behaviors(it)->next_in_place(it);
       if(!it)
       {
-        throw std::runtime_error{ fmt::format("Odd number of elements: {}", bs.to_string(seq)) };
+        throw std::runtime_error{ fmt::format("Odd number of elements: {}", bs->to_string(seq)) };
       }
-      auto const val(object_behaviors(it).first(it));
+      auto const val(behaviors(it)->first(it));
       transient.insert_or_assign(key, val);
     }
     return make_box<persistent_sorted_map>(transient.persistent());

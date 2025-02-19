@@ -23,22 +23,22 @@ namespace jank::runtime::obj::detail
       return true;
     }
 
-    auto const bs(object_behaviors(&o));
-    if(!bs.is_map)
+    auto const bs(behaviors(&o));
+    if(!bs->is_map)
     {
       return false;
     }
 
-    if(bs.count(&o) != count())
+    if(bs->count(&o) != count())
     {
       return false;
     }
 
     for(auto const &entry : static_cast<PT const *>(this)->data)
     {
-      auto const found(bs.contains(&o, entry.first));
+      auto const found(bs->contains(&o, entry.first));
 
-      if(!found || !runtime::equal(entry.second, bs.get(&o, entry.first)))
+      if(!found || !runtime::equal(entry.second, bs->get(&o, entry.first)))
       {
         return false;
       }

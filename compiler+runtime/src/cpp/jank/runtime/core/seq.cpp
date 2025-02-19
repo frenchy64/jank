@@ -30,39 +30,39 @@ namespace jank::runtime
     {
       return true;
     }
-    auto const bs(object_behaviors(o));
-    if(bs.is_seqable)
+    auto const bs(behaviors(o));
+    if(bs->is_seqable)
     {
-      return bs.seq(o) == nullptr;
+      return bs->seq(o) == nullptr;
     }
-    else if(bs.is_countable)
+    else if(bs->is_countable)
     {
-      return bs.count(o) == 0;
+      return bs->count(o) == 0;
     }
     else
     {
-      throw std::runtime_error{ fmt::format("cannot check if this is empty: {}", bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("cannot check if this is empty: {}", bs->to_string(o)) };
     }
   }
 
   native_bool is_seq(object_ptr const o)
   {
-    return object_behaviors(o).is_sequenceable;
+    return behaviors(o)->is_sequenceable;
   }
 
   native_bool is_seqable(object_ptr const o)
   {
-    return object_behaviors(o).is_seqable;
+    return behaviors(o)->is_seqable;
   }
 
   native_bool is_sequential(object_ptr const o)
   {
-    return object_behaviors(o).is_sequential;
+    return behaviors(o)->is_sequential;
   }
 
   native_bool is_collection(object_ptr const o)
   {
-    return object_behaviors(o).is_collection;
+    return behaviors(o)->is_collection;
   }
 
   native_bool is_list(object_ptr const o)
@@ -79,27 +79,27 @@ namespace jank::runtime
 
   native_bool is_map(object_ptr const o)
   {
-    return object_behaviors(o).is_map;
+    return behaviors(o)->is_map;
   }
 
   native_bool is_associative(object_ptr const o)
   {
-    return object_behaviors(o).is_associative;
+    return behaviors(o)->is_associative;
   }
 
   native_bool is_set(object_ptr const o)
   {
-    return object_behaviors(o).is_set;
+    return behaviors(o)->is_set;
   }
 
   native_bool is_countable(object_ptr const o)
   {
-    return object_behaviors(o).is_countable;
+    return behaviors(o)->is_countable;
   }
 
   native_bool is_transientable(object_ptr const o)
   {
-    return object_behaviors(o).is_transientable;
+    return behaviors(o)->is_transientable;
   }
 
   native_bool is_sorted(object_ptr const o)
@@ -110,40 +110,40 @@ namespace jank::runtime
 
   object_ptr transient(object_ptr const o)
   {
-    auto const bs(object_behaviors(o));
-    if(bs.is_transientable)
+    auto const bs(behaviors(o));
+    if(bs->is_transientable)
     {
-      return bs.to_transient(o);
+      return bs->to_transient(o);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not transientable: {}", bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("not transientable: {}", bs->to_string(o)) };
     }
   }
 
   object_ptr persistent(object_ptr const o)
   {
-    auto const bs(object_behaviors(o));
-    if(bs.is_persistentable)
+    auto const bs(behaviors(o));
+    if(bs->is_persistentable)
     {
-      return bs.to_persistent(o);
+      return bs->to_persistent(o);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not persistentable: {}", bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("not persistentable: {}", bs->to_string(o)) };
     }
   }
 
   object_ptr conj_in_place(object_ptr const coll, object_ptr const o)
   {
-    auto const bs(object_behaviors(coll));
-    if(bs.is_conjable_in_place)
+    auto const bs(behaviors(coll));
+    if(bs->is_conjable_in_place)
     {
-      return bs.conj_in_place(coll, o);
+      return bs->conj_in_place(coll, o);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not conjable_in_place: {}", bs.to_string(coll)) };
+      throw std::runtime_error{ fmt::format("not conjable_in_place: {}", bs->to_string(coll)) };
     }
   }
 
@@ -165,29 +165,29 @@ namespace jank::runtime
 
   object_ptr assoc_in_place(object_ptr const coll, object_ptr const k, object_ptr const v)
   {
-    auto const bs(object_behaviors(coll));
-    if(bs.is_associatively_writable_in_place)
+    auto const bs(behaviors(coll));
+    if(bs->is_associatively_writable_in_place)
     {
-      return bs.assoc_in_place(coll, k, v);
+      return bs->assoc_in_place(coll, k, v);
     }
     else
     {
       throw std::runtime_error{ fmt::format("not associatively_writable_in_place: {}",
-                                            bs.to_string(coll)) };
+                                            bs->to_string(coll)) };
     }
   }
 
   object_ptr dissoc_in_place(object_ptr const coll, object_ptr const k)
   {
-    auto const bs(object_behaviors(coll));
-    if(bs.is_associatively_writable_in_place)
+    auto const bs(behaviors(coll));
+    if(bs->is_associatively_writable_in_place)
     {
-      return bs.dissoc_in_place(coll, k);
+      return bs->dissoc_in_place(coll, k);
     }
     else
     {
       throw std::runtime_error{ fmt::format("not associatively_writable_in_place: {}",
-                                            bs.to_string(coll)) };
+                                            bs->to_string(coll)) };
     }
   }
 
@@ -203,10 +203,10 @@ namespace jank::runtime
     {
       return s;
     }
-    auto const bs(object_behaviors(s));
-    if(bs.is_seqable)
+    auto const bs(behaviors(s));
+    if(bs->is_seqable)
     {
-      auto const ret(bs.seq(s));
+      auto const ret(bs->seq(s));
       if(!ret)
       {
         return obj::nil::nil_const();
@@ -216,7 +216,7 @@ namespace jank::runtime
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs->to_string(s)) };
     }
   }
 
@@ -226,10 +226,10 @@ namespace jank::runtime
     {
       return s;
     }
-    auto const bs(object_behaviors(s));
-    if(bs.is_seqable)
+    auto const bs(behaviors(s));
+    if(bs->is_seqable)
     {
-      auto const ret(bs.fresh_seq(s));
+      auto const ret(bs->fresh_seq(s));
       if(!ret)
       {
         return obj::nil::nil_const();
@@ -238,7 +238,7 @@ namespace jank::runtime
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs->to_string(s)) };
     }
   }
 
@@ -248,24 +248,24 @@ namespace jank::runtime
     {
       return s;
     }
-    auto const bs(object_behaviors(s));
-    if(bs.is_sequenceable)
+    auto const bs(behaviors(s));
+    if(bs->is_sequenceable)
     {
-      return bs.first(s);
+      return bs->first(s);
     }
-    else if(bs.is_seqable)
+    else if(bs->is_seqable)
     {
-      auto const ret(bs.seq(s));
+      auto const ret(bs->seq(s));
       if(!ret)
       {
         return obj::nil::nil_const();
       }
 
-      return object_behaviors(ret).first(ret);
+      return behaviors(ret)->first(ret);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs->to_string(s)) };
     }
   }
 
@@ -280,14 +280,14 @@ namespace jank::runtime
     {
       return s;
     }
-    auto const bs(object_behaviors(s));
-    if(bs.is_sequenceable)
+    auto const bs(behaviors(s));
+    if(bs->is_sequenceable)
     {
-      return bs.next(s) ?: obj::nil::nil_const();
+      return bs->next(s) ?: obj::nil::nil_const();
     }
-    else if(bs.is_seqable)
+    else if(bs->is_seqable)
     {
-      auto const seq(bs.seq(s));
+      auto const seq(bs->seq(s));
       if(!seq)
       {
         return obj::nil::nil_const();
@@ -297,7 +297,7 @@ namespace jank::runtime
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs->to_string(s)) };
     }
   }
 
@@ -307,18 +307,18 @@ namespace jank::runtime
     {
       return s;
     }
-    auto const bs(object_behaviors(s));
-    if(bs.is_sequenceable_in_place)
+    auto const bs(behaviors(s));
+    if(bs->is_sequenceable_in_place)
     {
-      return bs.next_in_place(s) ?: obj::nil::nil_const();
+      return bs->next_in_place(s) ?: obj::nil::nil_const();
     }
-    else if(bs.is_sequenceable)
+    else if(bs->is_sequenceable)
     {
-      return bs.next(s) ?: obj::nil::nil_const();
+      return bs->next(s) ?: obj::nil::nil_const();
     }
-    else if(bs.is_seqable)
+    else if(bs->is_seqable)
     {
-      auto const ret(bs.seq(s));
+      auto const ret(bs->seq(s));
       if(!ret)
       {
         return obj::nil::nil_const();
@@ -328,7 +328,7 @@ namespace jank::runtime
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs->to_string(s)) };
     }
   }
 
@@ -338,8 +338,8 @@ namespace jank::runtime
     {
       return obj::persistent_list::empty();
     }
-    auto const bs(object_behaviors(s));
-    auto const seq(bs.seq(s));
+    auto const bs(behaviors(s));
+    auto const seq(bs->seq(s));
     if(!seq)
     {
       return obj::persistent_list::empty();
@@ -355,14 +355,14 @@ namespace jank::runtime
 
   object_ptr cons(object_ptr const head, object_ptr const tail)
   {
-    auto const bs(object_behaviors(tail));
-    if(bs.is_seqable)
+    auto const bs(behaviors(tail));
+    if(bs->is_seqable)
     {
-      return make_box<jank::runtime::obj::cons>(head, bs.seq(tail));
+      return make_box<jank::runtime::obj::cons>(head, bs->seq(tail));
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(tail)) };
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs->to_string(tail)) };
     }
   }
 
@@ -372,23 +372,23 @@ namespace jank::runtime
     {
       return make_box<obj::persistent_list>(std::in_place, o);
     }
-    auto const bs(object_behaviors(s));
-    if(bs.is_conjable_in_place)
+    auto const bs(behaviors(s));
+    if(bs->is_conjable_in_place)
     {
-      return bs.conj_in_place(s, o);
+      return bs->conj_in_place(s, o);
     }
-    else if(bs.is_conjable)
+    else if(bs->is_conjable)
     {
-      return bs.conj(s, o);
+      return bs->conj(s, o);
     }
-    else if(bs.is_seqable)
+    else if(bs->is_seqable)
     {
       // TODO save extra visit?
-      return runtime::conj(bs.seq(s) ?: obj::nil::nil_const(), o);
+      return runtime::conj(bs->seq(s) ?: obj::nil::nil_const(), o);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs->to_string(s)) };
     }
   }
 
@@ -411,27 +411,27 @@ namespace jank::runtime
 
   object_ptr assoc(object_ptr const m, object_ptr const k, object_ptr const v)
   {
-    auto const bs(object_behaviors(m));
-    if(bs.is_associatively_writable)
+    auto const bs(behaviors(m));
+    if(bs->is_associatively_writable)
     {
-      return bs.assoc(m, k, v);
+      return bs->assoc(m, k, v);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not associatively writable: {}", bs.to_string(m)) };
+      throw std::runtime_error{ fmt::format("not associatively writable: {}", bs->to_string(m)) };
     }
   }
 
   object_ptr dissoc(object_ptr const m, object_ptr const k)
   {
-    auto const bs(object_behaviors(m));
-    if(bs.is_associatively_writable)
+    auto const bs(behaviors(m));
+    if(bs->is_associatively_writable)
     {
-      return bs.dissoc(m, k);
+      return bs->dissoc(m, k);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not associatively writable: {}", bs.to_string(m)) };
+      throw std::runtime_error{ fmt::format("not associatively writable: {}", bs->to_string(m)) };
     }
   }
 
@@ -442,10 +442,10 @@ namespace jank::runtime
 
   object_ptr get(object_ptr const m, object_ptr const key, object_ptr const fallback)
   {
-    auto const bs(object_behaviors(m));
-    if(bs.is_associatively_readable)
+    auto const bs(behaviors(m));
+    if(bs->is_associatively_readable)
     {
-      return bs.get_default(m, key, fallback);
+      return bs->get_default(m, key, fallback);
     }
     else
     {
@@ -460,18 +460,18 @@ namespace jank::runtime
 
   object_ptr get_in(object_ptr m, object_ptr keys, object_ptr fallback)
   {
-    if(object_behaviors(m).is_associatively_readable)
+    if(behaviors(m)->is_associatively_readable)
     {
-      auto const keys_bs(object_behaviors(keys));
-      if(keys_bs.is_seqable)
+      auto const keys_bs(behaviors(keys));
+      if(keys_bs->is_seqable)
       {
         object_ptr ret{ m };
         //TODO next_in_place / first perf
-        for(auto seq(keys_bs.fresh_seq(keys)); seq != nullptr;
-            seq = object_behaviors(seq).next_in_place(seq))
+        for(auto seq(keys_bs->fresh_seq(keys)); seq != nullptr;
+            seq = behaviors(seq)->next_in_place(seq))
         {
           //TODO sentinel for fallback short circuiting
-          ret = get(ret, object_behaviors(seq).first(seq));
+          ret = get(ret, behaviors(seq)->first(seq));
         }
 
         if(ret == obj::nil::nil_const())
@@ -483,7 +483,7 @@ namespace jank::runtime
       else
       {
         throw std::runtime_error{ fmt::format("not seqable: {}",
-                                              object_behaviors(keys).to_string(keys)) };
+                                              behaviors(keys)->to_string(keys)) };
       }
     }
     else
@@ -501,10 +501,10 @@ namespace jank::runtime
       return nil;
     }
 
-    auto const bs(object_behaviors(s));
-    if(bs.is_associatively_readable)
+    auto const bs(behaviors(s));
+    if(bs->is_associatively_readable)
     {
-      return bs.get_entry(s, key);
+      return bs->get_entry(s, key);
     }
     else
     {
@@ -519,10 +519,10 @@ namespace jank::runtime
       return false;
     }
 
-    auto const bs(object_behaviors(s));
-    if(bs.is_associatively_readable || bs.is_set)
+    auto const bs(behaviors(s));
+    if(bs->is_associatively_readable || bs->is_set)
     {
-      return bs.contains(s, key);
+      return bs->contains(s, key);
     }
     else
     {
@@ -532,30 +532,30 @@ namespace jank::runtime
 
   object_ptr merge(object_ptr const m, object_ptr const other)
   {
-    auto const m_bs(object_behaviors(m));
-    if(m_bs.is_associatively_writable)
+    auto const m_bs(behaviors(m));
+    if(m_bs->is_associatively_writable)
     {
-      auto const other_bs(object_behaviors(other));
-      if(other_bs.is_map)
+      auto const other_bs(behaviors(other));
+      if(other_bs->is_map)
       {
         object_ptr ret{ m };
         //TODO next_in_place / first / kv perf
-        for(auto it = other_bs.fresh_seq(other); it != nullptr;
-            it = object_behaviors(it).next_in_place(it))
+        for(auto it = other_bs->fresh_seq(other); it != nullptr;
+            it = behaviors(it)->next_in_place(it))
         {
-          ret = conj(ret, object_behaviors(it).first(it));
+          ret = conj(ret, behaviors(it)->first(it));
         }
         return ret;
       }
       else
       {
         throw std::runtime_error{ fmt::format("not associatively readable: {}",
-                                              m_bs.to_string(m)) };
+                                              m_bs->to_string(m)) };
       }
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not associatively writable: {}", m_bs.to_string(m)) };
+      throw std::runtime_error{ fmt::format("not associatively writable: {}", m_bs->to_string(m)) };
     }
   }
 
@@ -598,16 +598,16 @@ namespace jank::runtime
       return fallback;
     }
 
-    auto const bs(object_behaviors(o));
-    if(bs.is_indexable)
+    auto const bs(behaviors(o));
+    if(bs->is_indexable)
     {
-      return bs.nth_default(o, idx, fallback);
+      return bs->nth_default(o, idx, fallback);
     }
-    else if(bs.is_seqable)
+    else if(bs->is_seqable)
     {
       native_integer i{};
       // TODO next_in_place / first without visit
-      for(auto it(bs.fresh_seq(o)); it != nullptr && !is_nil(it); it = next_in_place(it), ++i)
+      for(auto it(bs->fresh_seq(o)); it != nullptr && !is_nil(it); it = next_in_place(it), ++i)
       {
         if(i == index)
         {
@@ -629,10 +629,10 @@ namespace jank::runtime
       return o;
     }
 
-    auto const bs(object_behaviors(o));
-    if(bs.is_stackable)
+    auto const bs(behaviors(o));
+    if(bs->is_stackable)
     {
-      return bs.peek(o);
+      return bs->peek(o);
     }
     else
     {
@@ -647,10 +647,10 @@ namespace jank::runtime
       return o;
     }
 
-    auto const bs(object_behaviors(o));
-    if(bs.is_stackable)
+    auto const bs(behaviors(o));
+    if(bs->is_stackable)
     {
-      return bs.pop(o);
+      return bs->pop(o);
     }
     else
     {
@@ -660,10 +660,10 @@ namespace jank::runtime
 
   object_ptr empty(object_ptr const o)
   {
-    auto const bs(object_behaviors(o));
-    if(bs.is_collection)
+    auto const bs(behaviors(o));
+    if(bs->is_collection)
     {
-      return bs.empty(o);
+      return bs->empty(o);
     }
     else
     {
@@ -673,10 +673,10 @@ namespace jank::runtime
 
   native_persistent_string str(object_ptr const o, object_ptr const args)
   {
-    auto const bs(object_behaviors(args));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(args));
+    if(!bs->is_seqable)
     {
-      throw std::runtime_error{ "not seqable: " + bs.to_code_string(args) };
+      throw std::runtime_error{ "not seqable: " + bs->to_code_string(args) };
     }
     util::string_builder buff;
     buff.reserve(16);
@@ -684,12 +684,12 @@ namespace jank::runtime
     //TODO next_in_place / first perf
     if(0 < sequence_length(args))
     {
-      auto const fresh(bs.fresh_seq(args));
-      runtime::to_string(object_behaviors(fresh).first(fresh), buff);
-      for(auto it(object_behaviors(fresh).next_in_place(fresh)); it != nullptr;
-          it = object_behaviors(it).next_in_place(it))
+      auto const fresh(bs->fresh_seq(args));
+      runtime::to_string(behaviors(fresh)->first(fresh), buff);
+      for(auto it(behaviors(fresh)->next_in_place(fresh)); it != nullptr;
+          it = behaviors(it)->next_in_place(it))
       {
-        runtime::to_string(object_behaviors(it).first(it), buff);
+        runtime::to_string(behaviors(it)->first(it), buff);
       }
     }
     return buff.release();
@@ -717,17 +717,17 @@ namespace jank::runtime
       return 0;
     }
 
-    auto const bs(object_behaviors(s));
-    if(bs.is_countable)
+    auto const bs(behaviors(s));
+    if(bs->is_countable)
     {
-      return bs.count(s);
+      return bs->count(s);
     }
-    else if(bs.is_seqable)
+    else if(bs->is_seqable)
     {
       size_t length{ 0 };
       //TODO next_in_place perf
-      for(auto i(bs.fresh_seq(s)); i != nullptr && length < max;
-          i = object_behaviors(i).next_in_place(i))
+      for(auto i(bs->fresh_seq(s)); i != nullptr && length < max;
+          i = behaviors(i)->next_in_place(i))
       {
         ++length;
       }
@@ -735,7 +735,7 @@ namespace jank::runtime
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not seqable: {}", bs.to_string(s)) };
+      throw std::runtime_error{ fmt::format("not seqable: {}", bs->to_string(s)) };
     }
   }
 
@@ -746,18 +746,18 @@ namespace jank::runtime
       return true;
     }
 
-    auto const l_bs(object_behaviors(l));
-    if(!l_bs.is_seqable)
+    auto const l_bs(behaviors(l));
+    if(!l_bs->is_seqable)
     {
-      throw std::runtime_error{ "not seqable: " + l_bs.to_code_string(l) };
+      throw std::runtime_error{ "not seqable: " + l_bs->to_code_string(l) };
     }
-    auto const r_bs(object_behaviors(r));
-    if(!r_bs.is_seqable)
+    auto const r_bs(behaviors(r));
+    if(!r_bs->is_seqable)
     {
-      throw std::runtime_error{ "not seqable: " + r_bs.to_code_string(l) };
+      throw std::runtime_error{ "not seqable: " + r_bs->to_code_string(l) };
     }
-    auto l_it(l_bs.fresh_seq(l));
-    auto r_it(r_bs.fresh_seq(r));
+    auto l_it(l_bs->fresh_seq(l));
+    auto r_it(r_bs->fresh_seq(r));
     if(!r_it)
     {
       return l_it == nullptr;
@@ -768,14 +768,14 @@ namespace jank::runtime
     }
 
     //TODO next_in_place / first perf
-    for(; l_it != nullptr; l_it = object_behaviors(l_it).next_in_place(l_it),
-                           r_it = object_behaviors(r_it).next_in_place(r_it))
+    for(; l_it != nullptr; l_it = behaviors(l_it)->next_in_place(l_it),
+                           r_it = behaviors(r_it)->next_in_place(r_it))
     {
       if(!r_it)
       {
         return false;
       }
-      if(!runtime::equal(object_behaviors(l_it).first(l_it), object_behaviors(r_it).first(r_it)))
+      if(!runtime::equal(behaviors(l_it)->first(l_it), behaviors(r_it)->first(r_it)))
       {
         return false;
       }
@@ -785,16 +785,16 @@ namespace jank::runtime
 
   object_ptr reduce(object_ptr const f, object_ptr const init, object_ptr const s)
   {
-    auto const bs(object_behaviors(s));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(s));
+    if(!bs->is_seqable)
     {
-      throw std::runtime_error{ "not seqable: " + bs.to_code_string(s) };
+      throw std::runtime_error{ "not seqable: " + bs->to_code_string(s) };
     }
     object_ptr res{ init };
     //TODO next_in_place / first perf
-    for(auto it(bs.fresh_seq(s)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    for(auto it(bs->fresh_seq(s)); it != nullptr; it = behaviors(it)->next_in_place(it))
     {
-      res = dynamic_call(f, res, object_behaviors(it).first(it));
+      res = dynamic_call(f, res, behaviors(it)->first(it));
       if(res->type == object_type::reduced)
       {
         res = expect_object<obj::reduced>(res)->val;
@@ -834,40 +834,40 @@ namespace jank::runtime
 
   object_ptr chunk_first(object_ptr const o)
   {
-    auto const bs(object_behaviors(o));
-    if(bs.is_chunkable)
+    auto const bs(behaviors(o));
+    if(bs->is_chunkable)
     {
-      return bs.chunked_first(o);
+      return bs->chunked_first(o);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not chunkable: {}", bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("not chunkable: {}", bs->to_string(o)) };
     }
   }
 
   object_ptr chunk_next(object_ptr const o)
   {
-    auto const bs(object_behaviors(o));
-    if(bs.is_chunkable)
+    auto const bs(behaviors(o));
+    if(bs->is_chunkable)
     {
-      return bs.chunked_next(o) ?: obj::nil::nil_const();
+      return bs->chunked_next(o) ?: obj::nil::nil_const();
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not chunkable: {}", bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("not chunkable: {}", bs->to_string(o)) };
     }
   }
 
   object_ptr chunk_rest(object_ptr const o)
   {
-    auto const bs(object_behaviors(o));
-    if(bs.is_chunkable)
+    auto const bs(behaviors(o));
+    if(bs->is_chunkable)
     {
-      return bs.chunked_next(o) ?: obj::persistent_list::empty();
+      return bs->chunked_next(o) ?: obj::persistent_list::empty();
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not chunkable: {}", bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("not chunkable: {}", bs->to_string(o)) };
     }
   }
 
@@ -878,7 +878,7 @@ namespace jank::runtime
 
   native_bool is_chunked_seq(object_ptr const o)
   {
-    return object_behaviors(o).is_chunkable;
+    return behaviors(o)->is_chunkable;
   }
 
   object_ptr iterate(object_ptr const fn, object_ptr const o)
@@ -898,21 +898,21 @@ namespace jank::runtime
 
   object_ptr sort(object_ptr const coll)
   {
-    auto const bs(object_behaviors(coll));
+    auto const bs(behaviors(coll));
     native_vector<object_ptr> vec;
     //TODO next_in_place / first perf
-    for(auto it(bs.fresh_seq(coll)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    for(auto it(bs->fresh_seq(coll)); it != nullptr; it = behaviors(it)->next_in_place(it))
     {
-      vec.push_back(object_behaviors(it).first(it));
+      vec.push_back(behaviors(it)->first(it));
     }
 
     std::stable_sort(vec.begin(), vec.end(), [](object_ptr const a, object_ptr const b) {
       return runtime::compare(a, b) < 0;
     });
 
-    if(bs.is_metadatable)
+    if(bs->is_metadatable)
     {
-      return make_box<obj::native_vector_sequence>(bs.meta(coll), std::move(vec));
+      return make_box<obj::native_vector_sequence>(bs->meta(coll), std::move(vec));
     }
     else
     {
@@ -922,12 +922,12 @@ namespace jank::runtime
 
   object_ptr shuffle(object_ptr const coll)
   {
-    auto const bs(object_behaviors(coll));
+    auto const bs(behaviors(coll));
     native_vector<object_ptr> vec;
     //TODO next_in_place / first perf
-    for(auto it(bs.fresh_seq(coll)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    for(auto it(bs->fresh_seq(coll)); it != nullptr; it = behaviors(it)->next_in_place(it))
     {
-      vec.push_back(object_behaviors(it).first(it));
+      vec.push_back(behaviors(it)->first(it));
     }
 
     static std::random_device rd;

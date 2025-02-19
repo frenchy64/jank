@@ -16,8 +16,8 @@ namespace jank::runtime::perf
   {
     auto const label(to_string(get(opts, __rt_ctx->intern_keyword("label").expect_ok())));
 
-    auto const bs(object_behaviors(f));
-    if(bs.is_callable)
+    auto const bs(behaviors(f));
+    if(bs->is_callable)
     {
       ankerl::nanobench::Config config;
       //config.mTimeUnitName = TODO
@@ -34,13 +34,13 @@ namespace jank::runtime::perf
       //config.mWarmup = 1000;
 
       ankerl::nanobench::Bench().config(config).run(label, [&] {
-        auto const res(bs.call0(f));
+        auto const res(bs->call0(f));
         ankerl::nanobench::doNotOptimizeAway(res);
       });
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not callable: {}", bs.to_string(f)) };
+      throw std::runtime_error{ fmt::format("not callable: {}", bs->to_string(f)) };
     }
     return obj::nil::nil_const();
   }

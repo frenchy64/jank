@@ -444,8 +444,8 @@ namespace jank::analyze
         auto arity_list_obj(it.first().unwrap());
 
         auto const err([&]() -> result<void, error_ptr> {
-          auto const bs(object_behaviors(arity_list_obj));
-          if(bs.is_sequenceable)
+          auto const bs(behaviors(arity_list_obj));
+          if(bs->is_sequenceable)
           {
             auto arity_list(runtime::obj::persistent_list::create(arity_list_obj));
 
@@ -1049,12 +1049,12 @@ namespace jank::analyze
           return try_expression_type::other;
         }
 
-        auto const bs(object_behaviors(item));
-        if(!bs.is_seqable)
+        auto const bs(behaviors(item));
+        if(!bs->is_seqable)
         {
           return try_expression_type::other;
         }
-        auto const f(first(bs.seq(item)));
+        auto const f(first(bs->seq(item)));
         if(runtime::equal(f, &catch_))
         {
           return try_expression_type::catch_;
@@ -1267,12 +1267,12 @@ namespace jank::analyze
                          native_bool const)
   {
     /* TODO: Detect literal and act accordingly. */
-    auto const bs(object_behaviors(o));
+    auto const bs(behaviors(o));
     native_vector<std::pair<expression_ptr, expression_ptr>> exprs;
-    exprs.reserve(bs.count(o));
+    exprs.reserve(bs->count(o));
 
     // TODO next_in_place / first perf
-    for(auto d = bs.fresh_seq(o); d != nullptr; d = object_behaviors(d).next_in_place(d))
+    for(auto d = bs->fresh_seq(o); d != nullptr; d = behaviors(d)->next_in_place(d))
     {
       auto const kv(runtime::first(d));
 
@@ -1295,7 +1295,7 @@ namespace jank::analyze
     return make_box<expression>(expr::map<expression>{
       expression_base{ {}, position, current_frame, true },
       std::move(exprs),
-      bs.meta(o),
+      bs->meta(o),
     });
   }
 
@@ -1306,16 +1306,16 @@ namespace jank::analyze
                          option<expr::function_context_ptr> const &fn_ctx,
                          native_bool const)
   {
-    auto const bs(object_behaviors(o));
-    if(!bs.is_set)
+    auto const bs(behaviors(o));
+    if(!bs->is_set)
     {
-      return error::internal_analysis_failure("not set-like: " + bs.to_code_string(o));
+      return error::internal_analysis_failure("not set-like: " + bs->to_code_string(o));
     }
     native_vector<expression_ptr> exprs;
-    exprs.reserve(bs.count(o));
+    exprs.reserve(bs->count(o));
     native_bool literal{ true };
     //TODO next_in_place / first perf
-    for(auto d = bs.fresh_seq(o); d != nullptr; d = object_behaviors(d).next_in_place(d))
+    for(auto d = bs->fresh_seq(o); d != nullptr; d = behaviors(d)->next_in_place(d))
     {
       auto res(analyze(runtime::first(d), current_frame, expression_position::value, fn_ctx, true));
       if(res.is_err())
@@ -1335,7 +1335,7 @@ namespace jank::analyze
       auto const pre_eval_expr(make_box<expression>(expr::set<expression>{
         expression_base{ {}, position, current_frame, true },
         std::move(exprs),
-        bs.meta(o)
+        bs->meta(o)
       }));
       auto const constant(evaluate::eval(pre_eval_expr));
 
@@ -1351,7 +1351,7 @@ namespace jank::analyze
     return make_box<expression>(expr::set<expression>{
       expression_base{ {}, position, current_frame, true },
       std::move(exprs),
-      bs.meta(o)
+      bs->meta(o)
     });
   }
 
@@ -1542,7 +1542,7 @@ namespace jank::analyze
     }
 
     // TODO switch by concept
-    auto const bs(object_behaviors(o));
+    auto const bs(behaviors(o));
     auto const otype(o->type);
     if(otype == runtime::object_type::persistent_list)
     {
@@ -1560,15 +1560,15 @@ namespace jank::analyze
                             fn_ctx,
                             needs_box);
     }
-    else if(bs.is_map)
+    else if(bs->is_map)
     {
       return analyze_map(o, current_frame, position, fn_ctx, needs_box);
     }
-    else if(bs.is_set)
+    else if(bs->is_set)
     {
       return analyze_set(o, current_frame, position, fn_ctx, needs_box);
     }
-    else if(bs.is_number_like || otype == runtime::object_type::boolean
+    else if(bs->is_number_like || otype == runtime::object_type::boolean
             || otype == runtime::object_type::keyword || otype == runtime::object_type::nil
             || otype == runtime::object_type::persistent_string
             || otype == runtime::object_type::character)
@@ -1585,9 +1585,9 @@ namespace jank::analyze
     }
     /* This is used when building code from macros; they may end up being other forms of
      * sequences and not just lists. */
-    if(bs.is_sequential)
+    if(bs->is_sequential)
     {
-      return analyze_call(runtime::obj::persistent_list::create(bs.seq(o)),
+      return analyze_call(runtime::obj::persistent_list::create(bs->seq(o)),
                           current_frame,
                           position,
                           fn_ctx,
@@ -1605,7 +1605,7 @@ namespace jank::analyze
     {
       return error::internal_analysis_failure(
         fmt::format("Unimplemented analysis for object type '{}'",
-                    object_type_str(bs.base(o).type)),
+                    object_type_str(bs->base(o).type)),
         meta_source(o));
     }
   }

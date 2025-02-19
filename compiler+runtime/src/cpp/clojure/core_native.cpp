@@ -550,15 +550,15 @@ jank_object_ptr jank_load_clojure_core_native()
         return obj::boolean::false_const();
       }
 
-      auto const bs(object_behaviors(rest));
-      if(!bs.is_seqable)
+      auto const bs(behaviors(rest));
+      if(!bs->is_seqable)
       {
-        throw std::runtime_error{ "not seqable: " + bs.to_code_string(rest) };
+        throw std::runtime_error{ "not seqable: " + bs->to_code_string(rest) };
       }
       //TODO next_in_place / first perf
-      for(auto it(bs.fresh_seq(rest)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+      for(auto it(bs->fresh_seq(rest)); it != nullptr; it = behaviors(it)->next_in_place(it))
       {
-        if(!equal(l, object_behaviors(it).first(it)))
+        if(!equal(l, behaviors(it)->first(it)))
         {
           return obj::boolean::false_const();
         }

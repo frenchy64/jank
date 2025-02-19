@@ -16,17 +16,17 @@ namespace jank::runtime
     {
       return false;
     }
-    auto const bs(object_behaviors(&o));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(&o));
+    if(!bs->is_seqable)
     {
       return false;
     }
-    auto seq(bs.fresh_seq(&o));
+    auto seq(bs->fresh_seq(&o));
     auto it(begin);
     //TODO next_in_place / first perf
-    for(; it != end; ++it, seq = object_behaviors(seq).next_in_place(seq))
+    for(; it != end; ++it, seq = behaviors(seq)->next_in_place(seq))
     {
-      if(seq == nullptr || !runtime::equal(*it, object_behaviors(seq).first(seq)))
+      if(seq == nullptr || !runtime::equal(*it, behaviors(seq)->first(seq)))
       {
         return false;
       }

@@ -530,14 +530,14 @@ namespace jank::runtime
   object_ptr context::macroexpand1(object_ptr const o)
   {
     profile::timer const timer{ "rt macroexpand1" };
-    auto const bs(object_behaviors(o));
-    if(!bs.is_sequenceable)
+    auto const bs(behaviors(o));
+    if(!bs->is_sequenceable)
     {
       return o;
     }
     else
     {
-      auto const first_sym_obj(dyn_cast<obj::symbol>(bs.first(o)));
+      auto const first_sym_obj(dyn_cast<obj::symbol>(bs->first(o)));
       if(!first_sym_obj)
       {
         return o;

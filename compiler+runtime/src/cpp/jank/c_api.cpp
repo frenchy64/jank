@@ -839,10 +839,10 @@ extern "C"
   {
     auto const o_obj(reinterpret_cast<object *>(o));
     auto const meta_obj(reinterpret_cast<object *>(meta));
-    auto const bs(object_behaviors(o_obj));
-    if(bs.is_metadatable)
+    auto const bs(behaviors(o_obj));
+    if(bs->is_metadatable)
     {
-      bs.set_meta(o_obj, meta_obj);
+      bs->set_meta(o_obj, meta_obj);
     };
   }
 

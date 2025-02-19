@@ -84,18 +84,18 @@ namespace jank::runtime::obj
 
   native_bool repeat::equal(object const &o) const
   {
-    auto const bs(object_behaviors(&o));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(&o));
+    if(!bs->is_seqable)
     {
       return false;
     }
     else
     {
-      auto seq(bs.fresh_seq(&o));
+      auto seq(bs->fresh_seq(&o));
       /* TODO: This is common code; can it be shared? */
       //TODO next_in_place / first perf
-      for(auto it(object_behaviors(seq).fresh_seq(seq)); it != nullptr;
-          it = object_behaviors(it).fresh_seq(it), seq = object_behaviors(seq).fresh_seq(seq))
+      for(auto it(behaviors(seq)->fresh_seq(seq)); it != nullptr;
+          it = behaviors(it)->fresh_seq(it), seq = behaviors(seq)->fresh_seq(seq))
       {
         if(seq == nullptr || !runtime::equal(runtime::first(it), runtime::first(seq)))
         {

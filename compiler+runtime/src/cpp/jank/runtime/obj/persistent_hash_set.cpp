@@ -44,16 +44,16 @@ namespace jank::runtime::obj
 
   persistent_hash_set_ptr persistent_hash_set::create_from_seq(object_ptr const seq)
   {
-    auto const bs(object_behaviors(seq));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(seq));
+    if(!bs->is_seqable)
     {
-      throw std::runtime_error{ "not seqable: " + bs.to_code_string(seq) };
+      throw std::runtime_error{ "not seqable: " + bs->to_code_string(seq) };
     }
     runtime::detail::native_transient_hash_set transient;
     //TODO next_in_place / first perf
-    for(auto it(bs.fresh_seq(seq)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    for(auto it(bs->fresh_seq(seq)); it != nullptr; it = behaviors(it)->next_in_place(it))
     {
-      transient.insert(object_behaviors(it).first(it));
+      transient.insert(behaviors(it)->first(it));
     }
     return make_box<persistent_hash_set>(transient.persistent());
   }
@@ -65,20 +65,20 @@ namespace jank::runtime::obj
       return true;
     }
 
-    auto const bs(object_behaviors(&o));
-    if(!bs.is_set)
+    auto const bs(behaviors(&o));
+    if(!bs->is_set)
     {
       return false;
     }
 
-    if(bs.count(&o) != count())
+    if(bs->count(&o) != count())
     {
       return false;
     }
 
     for(auto const entry : data)
     {
-      if(!bs.contains(&o, entry))
+      if(!bs->contains(&o, entry))
       {
         return false;
       }

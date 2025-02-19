@@ -297,8 +297,8 @@ namespace jank::evaluate
       source = deref(source);
     }
 
-    auto const bs(object_behaviors(source));
-    if(bs.is_callable)
+    auto const bs(behaviors(source));
+    if(bs->is_callable)
     {
       native_vector<object_ptr> arg_vals;
       arg_vals.reserve(expr.arg_exprs.size());
@@ -393,15 +393,15 @@ namespace jank::evaluate
           }
       }
     }
-    auto const call1(bs.call1);
-    auto const call2(bs.call2);
+    auto const call1(bs->call1);
+    auto const call2(bs->call2);
     if(call1 && !call2)
     {
       auto const s(expr.arg_exprs.size());
       if(s != 1)
       {
         throw std::runtime_error{
-          fmt::format("invalid call with {} args to: {}", s, bs.to_string(source))
+          fmt::format("invalid call with {} args to: {}", s, bs->to_string(source))
         };
       }
       return call1(source, eval(expr.arg_exprs[0]));
@@ -417,14 +417,14 @@ namespace jank::evaluate
           return call2(source, eval(expr.arg_exprs[0]), eval(expr.arg_exprs[1]));
         default:
           throw std::runtime_error{
-            fmt::format("invalid call with {} args to: {}", s, bs.to_string(source))
+            fmt::format("invalid call with {} args to: {}", s, bs->to_string(source))
           };
       }
     }
     else
     {
       throw std::runtime_error{
-        fmt::format("invalid call with 0 args to: {}", expr.arg_exprs.size(), bs.to_string(source))
+        fmt::format("invalid call with 0 args to: {}", expr.arg_exprs.size(), bs->to_string(source))
       };
     }
   }

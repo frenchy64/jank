@@ -155,21 +155,21 @@ namespace jank::hash
   uint32_t visit(runtime::object const * const o)
   {
     assert(o);
-    return object_behaviors(o).to_hash(o);
+    return behaviors(o)->to_hash(o);
   }
 
   uint32_t ordered(runtime::object const * const sequence)
   {
     assert(sequence);
-    auto const bs(object_behaviors(sequence));
-    if(bs.is_sequenceable)
+    auto const bs(behaviors(sequence));
+    if(bs->is_sequenceable)
     {
       uint32_t n{};
       uint32_t hash{ 1 };
-      for(auto it(bs.fresh_seq(sequence)); it != nullptr;
-          it = object_behaviors(it).next_in_place(it))
+      for(auto it(bs->fresh_seq(sequence)); it != nullptr;
+          it = behaviors(it)->next_in_place(it))
       {
-        hash = 31 * hash + visit(object_behaviors(it).first(it));
+        hash = 31 * hash + visit(behaviors(it)->first(it));
         ++n;
       }
 
@@ -177,22 +177,22 @@ namespace jank::hash
     }
     else
     {
-      return bs.to_hash(sequence);
+      return bs->to_hash(sequence);
     }
   }
 
   uint32_t unordered(runtime::object const * const sequence)
   {
     assert(sequence);
-    auto const bs(object_behaviors(sequence));
-    if(bs.is_sequenceable)
+    auto const bs(behaviors(sequence));
+    if(bs->is_sequenceable)
     {
       uint32_t n{};
       uint32_t hash{ 1 };
-      for(auto it(bs.fresh_seq(sequence)); it != nullptr;
-          it = object_behaviors(it).next_in_place(it))
+      for(auto it(bs->fresh_seq(sequence)); it != nullptr;
+          it = behaviors(it)->next_in_place(it))
       {
-        hash += visit(object_behaviors(it).first(it));
+        hash += visit(behaviors(it)->first(it));
         ++n;
       }
 
@@ -200,7 +200,7 @@ namespace jank::hash
     }
     else
     {
-      return bs.to_hash(sequence);
+      return bs->to_hash(sequence);
     }
   }
 }

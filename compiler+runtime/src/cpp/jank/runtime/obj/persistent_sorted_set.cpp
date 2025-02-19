@@ -34,16 +34,16 @@ namespace jank::runtime::obj
 
   persistent_sorted_set_ptr persistent_sorted_set::create_from_seq(object_ptr const seq)
   {
-    auto const bs(object_behaviors(seq));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(seq));
+    if(!bs->is_seqable)
     {
-      throw std::runtime_error{ "not seqable: " + bs.to_code_string(seq) };
+      throw std::runtime_error{ "not seqable: " + bs->to_code_string(seq) };
     }
 
     runtime::detail::native_transient_sorted_set transient;
-    for(auto it(bs.fresh_seq(seq)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    for(auto it(bs->fresh_seq(seq)); it != nullptr; it = behaviors(it)->next_in_place(it))
     {
-      transient.insert_v(object_behaviors(it).first(it));
+      transient.insert_v(behaviors(it)->first(it));
     }
     return make_box<persistent_sorted_set>(transient.persistent());
   }
@@ -55,20 +55,20 @@ namespace jank::runtime::obj
       return true;
     }
 
-    auto const bs(object_behaviors(&o));
-    if(!bs.is_set)
+    auto const bs(behaviors(&o));
+    if(!bs->is_set)
     {
       return false;
     }
 
-    if(bs.count(&o) != count())
+    if(bs->count(&o) != count())
     {
       return false;
     }
 
     for(auto const entry : data)
     {
-      if(!bs.contains(&o, entry))
+      if(!bs->contains(&o, entry))
       {
         return false;
       }

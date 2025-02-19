@@ -30,14 +30,14 @@ namespace jank::runtime::obj
       return make_box<persistent_list>();
     }
 
-    auto const bs(object_behaviors(s));
-    if(!bs.is_sequenceable)
+    auto const bs(behaviors(s));
+    if(!bs->is_sequenceable)
     {
-      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs.to_string(s)) };
+      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs->to_string(s)) };
     }
     native_vector<object_ptr> v;
     //TODO next_in_place / first perf
-    for(auto i(bs.fresh_seq(s)); i != nullptr; i = object_behaviors(i).next_in_place(i))
+    for(auto i(bs->fresh_seq(s)); i != nullptr; i = behaviors(i)->next_in_place(i))
     {
       v.emplace_back(runtime::first(i));
     }

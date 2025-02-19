@@ -38,12 +38,12 @@ namespace jank::runtime
         return 1;
       }
 
-      auto const bs(object_behaviors(l));
-      if(!bs.is_comparable)
+      auto const bs(behaviors(l));
+      if(!bs->is_comparable)
       {
-        throw std::runtime_error{ fmt::format("not comparable: {}", bs.to_string(l)) };
+        throw std::runtime_error{ fmt::format("not comparable: {}", bs->to_string(l)) };
       }
-      return bs.compare(l, r);
+      return bs->compare(l, r);
     }
 
     return -1;
@@ -117,15 +117,15 @@ namespace jank::runtime
       return obj::nil::nil_const();
     }
 
-    auto const bs(object_behaviors(args));
-    if(!bs.is_sequenceable)
+    auto const bs(behaviors(args));
+    if(!bs->is_sequenceable)
     {
-      throw std::runtime_error{ fmt::format("expected a sequence: {}", bs.to_string(args)) };
+      throw std::runtime_error{ fmt::format("expected a sequence: {}", bs->to_string(args)) };
     }
     util::string_builder buff;
-    into_builder(bs.first(args), buff);
+    into_builder(bs->first(args), buff);
     // TODO next_in_place / first perf
-    for(auto it(bs.next_in_place(args)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    for(auto it(bs->next_in_place(args)); it != nullptr; it = behaviors(it)->next_in_place(it))
     {
       buff(' ');
       runtime::to_string(first(it), buff);
@@ -164,14 +164,14 @@ namespace jank::runtime
 
   native_real to_real(object_ptr const o)
   {
-    auto const bs(object_behaviors(o));
-    if(bs.is_number_like)
+    auto const bs(behaviors(o));
+    if(bs->is_number_like)
     {
-      return bs.to_real(o);
+      return bs->to_real(o);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not a number: {}", bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("not a number: {}", bs->to_string(o)) };
     }
   }
 
@@ -197,7 +197,7 @@ namespace jank::runtime
       return !lhs;
     }
 
-    return object_behaviors(lhs).equal(lhs, rhs);
+    return behaviors(lhs)->equal(lhs, rhs);
   }
 
   object_ptr meta(object_ptr const m)
@@ -207,10 +207,10 @@ namespace jank::runtime
       return obj::nil::nil_const();
     }
 
-    auto const bs(object_behaviors(m));
-    if(bs.is_metadatable)
+    auto const bs(behaviors(m));
+    if(bs->is_metadatable)
     {
-      return bs.meta(m).unwrap_or(obj::nil::nil_const());
+      return bs->meta(m).unwrap_or(obj::nil::nil_const());
     }
     else
     {
@@ -220,27 +220,27 @@ namespace jank::runtime
 
   object_ptr with_meta(object_ptr const o, object_ptr const m)
   {
-    auto const bs(object_behaviors(o));
-    if(bs.is_metadatable)
+    auto const bs(behaviors(o));
+    if(bs->is_metadatable)
     {
-      return bs.with_meta(o, m);
+      return bs->with_meta(o, m);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not metadatable: {}", bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("not metadatable: {}", bs->to_string(o)) };
     }
   }
 
   object_ptr reset_meta(object_ptr const o, object_ptr const m)
   {
-    auto const bs(object_behaviors(o));
-    if(bs.is_metadatable)
+    auto const bs(behaviors(o));
+    if(bs->is_metadatable)
     {
-      return bs.set_meta(o, m);
+      return bs->set_meta(o, m);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not metadatable: {}", bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("not metadatable: {}", bs->to_string(o)) };
     }
   }
 
@@ -266,37 +266,37 @@ namespace jank::runtime
 
   native_bool is_named(object_ptr const o)
   {
-    return object_behaviors(o).is_named;
+    return behaviors(o)->is_named;
   }
 
   native_persistent_string name(object_ptr const o)
   {
-    auto const bs(object_behaviors(o));
+    auto const bs(behaviors(o));
     if(o->type == object_type::persistent_string)
     {
-      return bs.to_string(o);
+      return bs->to_string(o);
     }
-    else if(bs.is_named)
+    else if(bs->is_named)
     {
-      return bs.get_name(o);
+      return bs->get_name(o);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not nameable: {}", bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("not nameable: {}", bs->to_string(o)) };
     }
   }
 
   object_ptr namespace_(object_ptr const o)
   {
-    auto const bs(object_behaviors(o));
-    if(bs.is_named)
+    auto const bs(behaviors(o));
+    if(bs->is_named)
     {
-      auto const ns(bs.get_namespace(o));
+      auto const ns(bs->get_namespace(o));
       return (ns.empty() ? obj::nil::nil_const() : make_box<obj::persistent_string>(ns));
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not nameable: {}", bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("not nameable: {}", bs->to_string(o)) };
     }
   }
 
@@ -322,12 +322,12 @@ namespace jank::runtime
 
   native_bool is_callable(object_ptr const o)
   {
-    return object_behaviors(o).is_callable;
+    return behaviors(o)->is_callable;
   }
 
   native_hash to_hash(object_ptr const o)
   {
-    return object_behaviors(o).to_hash(o);
+    return behaviors(o)->to_hash(o);
   }
 
   object_ptr macroexpand1(object_ptr const o)
@@ -418,14 +418,14 @@ namespace jank::runtime
 
   object_ptr deref(object_ptr const o)
   {
-    auto const bs(object_behaviors(o));
-    if(bs.is_derefable)
+    auto const bs(behaviors(o));
+    if(bs->is_derefable)
     {
-      return bs.deref(o);
+      return bs->deref(o);
     }
     else
     {
-      throw std::runtime_error{ fmt::format("not derefable: {}", bs.to_string(o)) };
+      throw std::runtime_error{ fmt::format("not derefable: {}", bs->to_string(o)) };
     }
   }
 

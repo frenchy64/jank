@@ -10,11 +10,11 @@ namespace jank::runtime
   //   -> countable_behaviors
   //      -> count
   // TODO behaviors<T> might let us avoid try_object calls
-  struct behaviors
+  struct object_behaviors
   {
     template <typename T>
     requires behavior::object_like<T>
-    behaviors(native_box<T>);
+    object_behaviors(native_box<T>);
 
     //native_bool is_list{};
     //native_bool is_sorted{};
@@ -217,5 +217,5 @@ namespace jank::runtime
     //}
   };
 
-  behaviors object_behaviors(object_ptr type);
+  object_behaviors const *behaviors(object_ptr type);
 }

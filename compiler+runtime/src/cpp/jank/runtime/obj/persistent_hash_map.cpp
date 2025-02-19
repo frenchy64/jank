@@ -52,24 +52,24 @@ namespace jank::runtime::obj
 
   persistent_hash_map_ptr persistent_hash_map::create_from_seq(object_ptr const seq)
   {
-    auto const bs(object_behaviors(seq));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(seq));
+    if(!bs->is_seqable)
     {
-      throw std::runtime_error{ fmt::format("Not seqable: {}", bs.to_string(seq)) };
+      throw std::runtime_error{ fmt::format("Not seqable: {}", bs->to_string(seq)) };
     }
 
     runtime::detail::native_transient_hash_map transient;
     // TODO next_in_place / first perf
-    for(auto it(bs.fresh_seq(seq)); it != nullptr; it = object_behaviors(it).next_in_place(it))
+    for(auto it(bs->fresh_seq(seq)); it != nullptr; it = behaviors(it)->next_in_place(it))
     {
-      auto const it_bs(object_behaviors(it));
-      auto const key(it_bs.first(it));
-      it = it_bs.next_in_place(it);
+      auto const it_bs(behaviors(it));
+      auto const key(it_bs->first(it));
+      it = it_bs->next_in_place(it);
       if(!it)
       {
-        throw std::runtime_error{ fmt::format("Odd number of elements: {}", bs.to_string(seq)) };
+        throw std::runtime_error{ fmt::format("Odd number of elements: {}", bs->to_string(seq)) };
       }
-      // TODO not confident using it_bs.first here..
+      // TODO not confident using it_bs->first here..
       auto const val(runtime::first(it));
       transient.set(key, val);
     }

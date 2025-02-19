@@ -47,13 +47,13 @@ namespace jank::runtime::obj
       return nullptr;
     }
 
-    auto const bs(object_behaviors(tail));
-    if(!bs.is_sequenceable)
+    auto const bs(behaviors(tail));
+    if(!bs->is_sequenceable)
     {
-      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs.to_string(tail)) };
+      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs->to_string(tail)) };
     }
-    head = bs.first(tail);
-    tail = bs.next(tail);
+    head = bs->first(tail);
+    tail = bs->next(tail);
     if(tail == nil::nil_const())
     {
       tail = nullptr;
@@ -64,19 +64,19 @@ namespace jank::runtime::obj
 
   native_bool cons::equal(object const &o) const
   {
-    auto const bs(object_behaviors(&o));
-    if(!bs.is_seqable)
+    auto const bs(behaviors(&o));
+    if(!bs->is_seqable)
     {
       return false;
     }
 
-    auto seq(bs.fresh_seq(&o));
+    auto seq(bs->fresh_seq(&o));
     //TODO next_in_place / first perf
     for(object_ptr it(fresh_seq()); it != nullptr;
-        it = object_behaviors(it).next_in_place(it), seq = object_behaviors(seq).next_in_place(seq))
+        it = behaviors(it)->next_in_place(it), seq = behaviors(seq)->next_in_place(seq))
     {
       if(seq == nullptr
-         || !runtime::equal(object_behaviors(it).first(it), object_behaviors(seq).first(seq)))
+         || !runtime::equal(behaviors(it)->first(it), behaviors(seq)->first(seq)))
       {
         return false;
       }

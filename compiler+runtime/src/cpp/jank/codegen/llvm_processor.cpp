@@ -447,11 +447,11 @@ namespace jank::codegen
         }
       default:
         {
-          auto const bs(object_behaviors(o));
-          if(!bs.is_seqable)
+          auto const bs(behaviors(o));
+          if(!bs->is_seqable)
           {
             throw std::runtime_error{ fmt::format("unimplemented constant codegen: {}\n",
-                                                  bs.to_string(o)) };
+                                                  bs->to_string(o)) };
           }
           ret = gen_global_from_read_string(o);
           break;
@@ -1407,10 +1407,10 @@ namespace jank::codegen
       auto const call(ctx->builder->CreateCall(create_fn, args));
       ctx->builder->CreateStore(call, global);
 
-      auto const bs(object_behaviors(o));
-      if(bs.is_metadatable)
+      auto const bs(behaviors(o));
+      if(bs->is_metadatable)
       {
-        auto const ometa(bs.meta(o));
+        auto const ometa(bs->meta(o));
         if(ometa)
         {
           auto const set_meta_fn_type(

@@ -43,6 +43,6 @@ namespace std
       return false;
     }
 
-    return object_behaviors(lhs).equal(lhs, rhs);
+    return behaviors(lhs)->equal(lhs, rhs);
   }
 }

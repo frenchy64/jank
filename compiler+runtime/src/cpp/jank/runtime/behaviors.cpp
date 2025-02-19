@@ -24,7 +24,7 @@ namespace jank::runtime
 {
   template <typename T>
   requires behavior::object_like<T>
-  behaviors::behaviors(native_box<T>)
+  object_behaviors::object_behaviors(native_box<T>)
   {
     if constexpr(behavior::object_like<T>)
     {
@@ -309,12 +309,12 @@ namespace jank::runtime
     }
   }
 
-  behaviors object_behaviors(object_ptr type)
+  object_behaviors const *behaviors(object_ptr type)
   {
     return visit_object(
-      [](auto const typed_o) -> behaviors {
-        static behaviors const bs{ typed_o };
-        return bs;
+      [](auto const typed_o) -> object_behaviors const * {
+        static object_behaviors const bs{ typed_o };
+        return &bs;
       },
       type);
   }
