@@ -497,6 +497,7 @@ jank_object_ptr jank_load_clojure_core_native()
   intern_fn("prefers", &core_native::prefers);
   intern_val("int-min", std::numeric_limits<native_integer>::min());
   intern_val("int-max", std::numeric_limits<native_integer>::max());
+  intern_val("hardware-concurrency", std::thread::hardware_concurrency());
   intern_fn("sleep", &core_native::sleep);
   intern_fn("current-time", &core_native::current_time);
   intern_fn("create-ns", &core_native::intern_ns);
@@ -685,13 +686,6 @@ jank_object_ptr jank_load_clojure_core_native()
       return subs(s, start, end);
     };
     intern_fn_obj("subs", fn);
-  }
-
-  {
-    auto const fn(
-      make_box<obj::jit_function>(behavior::callable::build_arity_flags(0, false, false)));
-    fn->arity_0 = []() -> object * { return make_box(std::thread::hardware_concurrency()); };
-    intern_fn_obj("hardware-concurrency", fn);
   }
 
   {

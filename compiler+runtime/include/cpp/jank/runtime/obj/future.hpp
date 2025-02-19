@@ -10,7 +10,6 @@ namespace jank::runtime::obj
   struct future : gc
   {
     static constexpr object_type obj_type{ object_type::future };
-    // TODO???
     static constexpr native_bool pointer_free{ false };
 
     future() = default;

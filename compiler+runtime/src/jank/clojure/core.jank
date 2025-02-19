@@ -6774,7 +6774,7 @@ fails, attempts to require sym's namespace and retries."
   computationally intensive functions where the time of f dominates
   the coordination overhead."
   ([f coll]
-   (let [n (+ 2 (clojure.core-native/hardware-concurrency))
+   (let [n (+ 2 clojure.core-native/hardware-concurrency)
          rets (map #(future (f %)) coll)
          step (fn step [[x & xs :as vs] fs]
                 (lazy-seq
