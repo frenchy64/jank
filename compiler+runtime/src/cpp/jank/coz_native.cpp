@@ -1,5 +1,12 @@
-#include <jank/coz.hpp>
-#include <coz.hpp>
+#include <jank/coz_native.hpp>
+#include <jank/runtime/coz.hpp>
+
+#include <jank/runtime/convert.hpp>
+#include <jank/runtime/context.hpp>
+#include <jank/runtime/core/munge.hpp>
+#include <jank/runtime/obj/native_function_wrapper.hpp>
+#include <jank/runtime/obj/persistent_hash_map.hpp>
+#include <jank/runtime/obj/keyword.hpp>
 
 jank_object_ptr jank_load_jank_coz_native()
 {
@@ -15,7 +22,10 @@ jank_object_ptr jank_load_jank_coz_native()
           __rt_ctx->intern_keyword("name").expect_ok(),
           make_box(obj::symbol{ __rt_ctx->current_ns()->to_string(), name }.to_string())))));
   });
-  intern_fn("benchmark", &perf::benchmark);
+  intern_fn("progress", &coz::progress);
+  intern_fn("progress-named", &coz::progress_named);
+  intern_fn("begin", &coz::begin);
+  intern_fn("end", &coz::end);
 
   return erase(obj::nil::nil_const());
 }
