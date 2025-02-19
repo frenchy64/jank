@@ -1,7 +1,7 @@
 #pragma once
 
 #include <jank/runtime/object.hpp>
-//#include <future>
+#include <future>
 
 namespace jank::runtime::obj
 {
@@ -33,6 +33,6 @@ namespace jank::runtime::obj
     object_ptr val{};
     object_ptr fn{};
     object_ptr error{};
-    //std::shared_future<object_ptr> fut;
+    std::shared_future<object_ptr> fut;
   };
 }

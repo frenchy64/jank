@@ -7,6 +7,7 @@
 #include <jank/runtime/context.hpp>
 #include <jank/runtime/behavior/callable.hpp>
 #include <jank/runtime/visit.hpp>
+#include <thread>
 
 namespace clojure::core_native
 {
@@ -684,6 +685,15 @@ jank_object_ptr jank_load_clojure_core_native()
       return subs(s, start, end);
     };
     intern_fn_obj("subs", fn);
+  }
+
+  {
+    auto const fn(
+      make_box<obj::jit_function>(behavior::callable::build_arity_flags(0, false, false)));
+    fn->arity_0 = []() -> object * { return make_box<integer>(std::thread::hardware_concurrency()); };
+      return subs(s, start, end);
+    };
+    intern_fn_obj("hardware-concurrency", fn);
   }
 
   {
