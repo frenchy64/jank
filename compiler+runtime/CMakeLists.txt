@@ -91,6 +91,7 @@ set(
   jank_common_compiler_flags
   -std=gnu++20
   -DIMMER_HAS_LIBGC=1 -DIMMER_TAGGED_NODE=0 -DHAVE_CXX14=1
+  -g -DNDEBUG -gdwarf-3
   #-DLIBASSERT_USE_FMT=1
   #-DLIBASSERT_STATIC_DEFINE=1
   #-stdlib=libc++
@@ -302,7 +303,7 @@ target_link_libraries(
 
 jank_hook_llvm(jank_lib)
 
-add_compile_options(--g gdwarf-3)
+add_compile_options()
 
 # Build a string of all of our JIT compilation flags so we can load them up in the runtime.
 set(jank_jit_compile_flags_list ${jank_common_compiler_flags} ${jank_jit_compiler_flags})
