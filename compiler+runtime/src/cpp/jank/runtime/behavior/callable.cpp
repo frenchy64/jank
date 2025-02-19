@@ -390,16 +390,16 @@ namespace jank::runtime
                           make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8));
         case callable::mask_variadic_arity(4):
           return bs
-            .call5(source, a1, a2, a3, a4, make_box<obj::native_array_sequence>(a5, a6, a7, a8));
+            ->call5(source, a1, a2, a3, a4, make_box<obj::native_array_sequence>(a5, a6, a7, a8));
         case callable::mask_variadic_arity(5):
           return bs
-            .call6(source, a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6, a7, a8));
+            ->call6(source, a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6, a7, a8));
         case callable::mask_variadic_arity(6):
           return bs
-            .call7(source, a1, a2, a3, a4, a5, a6, make_box<obj::native_array_sequence>(a7, a8));
+            ->call7(source, a1, a2, a3, a4, a5, a6, make_box<obj::native_array_sequence>(a7, a8));
         case callable::mask_variadic_arity(7):
           return bs
-            .call8(source, a1, a2, a3, a4, a5, a6, a7, make_box<obj::native_array_sequence>(a8));
+            ->call8(source, a1, a2, a3, a4, a5, a6, a7, make_box<obj::native_array_sequence>(a8));
         case callable::mask_variadic_arity(8):
           if(!callable::is_variadic_ambiguous(arity_flags))
           {
