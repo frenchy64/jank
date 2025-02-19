@@ -302,6 +302,8 @@ target_link_libraries(
 
 jank_hook_llvm(jank_lib)
 
+add_compile_options(--g gdwarf-3)
+
 # Build a string of all of our JIT compilation flags so we can load them up in the runtime.
 set(jank_jit_compile_flags_list ${jank_common_compiler_flags} ${jank_jit_compiler_flags})
 list(JOIN jank_jit_compile_flags_list " " jank_jit_compile_flags_str)

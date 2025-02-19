@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+coz run --- jank --module-path src run-main coz.toy
