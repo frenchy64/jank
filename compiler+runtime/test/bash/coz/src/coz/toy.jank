@@ -1,7 +1,7 @@
-(ns coz.toy
-  (:require [jank.coz :as coz]))
+(ns coz.toy)
 
 (defn -main []
-  (dotimes [_ 1000]
-    (+ 1 2)
-    (coz/progress!)))
+  (let [a (future (prn "hi"))
+        b (future (prn "bye"))]
+    @a
+    @b))

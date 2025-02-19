@@ -91,7 +91,6 @@ set(
   jank_common_compiler_flags
   -std=gnu++20
   -DIMMER_HAS_LIBGC=1 -DIMMER_TAGGED_NODE=0 -DHAVE_CXX14=1
-  -g -DNDEBUG -gdwarf-3
   #-DLIBASSERT_USE_FMT=1
   #-DLIBASSERT_STATIC_DEFINE=1
   #-stdlib=libc++
@@ -99,7 +98,6 @@ set(
 
 set(
   jank_linker_flags
-  -ldl
   #-stdlib=libc++ -lc++abi
   )
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -182,7 +180,6 @@ add_library(
   src/cpp/jank/runtime/core/munge.cpp
   src/cpp/jank/runtime/core/math.cpp
   src/cpp/jank/runtime/perf.cpp
-  src/cpp/jank/runtime/coz.cpp
   src/cpp/jank/runtime/module/loader.cpp
   src/cpp/jank/runtime/object.cpp
   src/cpp/jank/runtime/detail/native_persistent_array_map.cpp
@@ -233,7 +230,6 @@ add_library(
   src/cpp/jank/runtime/obj/atom.cpp
   src/cpp/jank/runtime/obj/volatile.cpp
   src/cpp/jank/runtime/obj/delay.cpp
-  src/cpp/jank/runtime/obj/future.cpp
   src/cpp/jank/runtime/obj/reduced.cpp
   src/cpp/jank/runtime/behavior/callable.cpp
   src/cpp/jank/runtime/behavior/metadatable.cpp
@@ -248,7 +244,6 @@ add_library(
   src/cpp/clojure/core_native.cpp
   src/cpp/jank/compiler_native.cpp
   src/cpp/jank/perf_native.cpp
-  src/cpp/jank/coz_native.cpp
 )
 
 target_include_directories(
@@ -303,8 +298,6 @@ target_link_libraries(
 )
 
 jank_hook_llvm(jank_lib)
-
-add_compile_options()
 
 # Build a string of all of our JIT compilation flags so we can load them up in the runtime.
 set(jank_jit_compile_flags_list ${jank_common_compiler_flags} ${jank_jit_compiler_flags})
