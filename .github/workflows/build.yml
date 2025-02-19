@@ -38,6 +38,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Install coz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdwarf-dev
+          sudo apt-get install -y nodejs npm
+          sudo apt-get install -y build-essential cmake docutils-common git python3 pkg-config
+          git clone https://github.com/plasma-umass/libelfin && cd libelfin && make && sudo make install && cd ..
+          git clone https://github.com/plasma-umass/coz && cd coz && cmake . && make && sudo make install && cd ..
+          sudo ldconfig
+          sudo sh -c 'echo 1 >/proc/sys/kernel/perf_event_paranoid'
       - name: Build and test
         run: |
           curl -sL -o install-bb https://raw.githubusercontent.com/babashka/babashka/master/install
