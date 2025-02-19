@@ -99,6 +99,7 @@ set(
 
 set(
   jank_linker_flags
+  -ldl
   #-stdlib=libc++ -lc++abi
   )
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
