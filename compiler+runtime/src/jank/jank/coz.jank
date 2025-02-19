@@ -8,4 +8,5 @@
 (defmacro scope! [n & body]
   `(let [n# ~n]
      (begin! n#)
-     (try (do ~@body) (finally (end! n#)))))
+     (try (do ~@body)
+       (finally (end! n#)))))

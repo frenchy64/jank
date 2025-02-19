@@ -9,8 +9,6 @@
 
 namespace jank::runtime::coz
 {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-value"
   object_ptr progress()
   {
     COZ_PROGRESS;
@@ -21,7 +19,10 @@ namespace jank::runtime::coz
   {
     std::string const s(fmt::format("{}", to_string(name)));
     const char* const c(s.c_str());
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
     COZ_PROGRESS(c);
+#pragma clang diagnostic pop
     return obj::nil::nil_const();
   }
 
@@ -29,7 +30,10 @@ namespace jank::runtime::coz
   {
     std::string const s(fmt::format("{}", to_string(name)));
     const char* const c(s.c_str());
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
     COZ_BEGIN(c);
+#pragma clang diagnostic pop
     return obj::nil::nil_const();
   }
 
@@ -37,8 +41,10 @@ namespace jank::runtime::coz
   {
     std::string const s(fmt::format("{}", to_string(name)));
     const char* const c(s.c_str());
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
     COZ_END(c);
+#pragma clang diagnostic pop
     return obj::nil::nil_const();
   }
-#pragma clang diagnostic pop
 }
