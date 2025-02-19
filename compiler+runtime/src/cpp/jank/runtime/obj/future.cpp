@@ -8,7 +8,6 @@
 namespace jank::runtime::obj
 {
   future::future(object_ptr const fn)
-    : fn{ fn }
   {
     this->fut = std::async(std::launch::async, [&](){ return dynamic_call(fn); });
   }

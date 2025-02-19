@@ -29,9 +29,6 @@ namespace jank::runtime::obj
     object_ptr blocking_deref(object_ptr const, object_ptr const);
 
     object base{ obj_type };
-    object_ptr val{};
-    object_ptr fn{};
-    object_ptr error{};
     std::shared_future<object_ptr> fut;
   };
 }
