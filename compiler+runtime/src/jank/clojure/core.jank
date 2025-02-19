@@ -6744,7 +6744,7 @@ fails, attempts to require sym's namespace and retries."
   of deref with timeout is used. See also - realized?."
   [f]
   (let [#_#_f (binding-conveyor-fn f)] ;;TODO
-    (clojure.core-native/future-call f))
+    (clojure.core-native/future-call f)))
 
 (defmacro future
   "Takes a body of expressions and yields a future object that will
