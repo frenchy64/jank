@@ -41,7 +41,8 @@ namespace jank::runtime
     }
     else
     {
-      throw std::runtime_error{ fmt::format("cannot check if this is empty: {}", bs->to_string(o)) };
+      throw std::runtime_error{ fmt::format("cannot check if this is empty: {}",
+                                            bs->to_string(o)) };
     }
   }
 
@@ -768,8 +769,8 @@ namespace jank::runtime
     }
 
     //TODO next_in_place / first perf
-    for(; l_it != nullptr; l_it = behaviors(l_it)->next_in_place(l_it),
-                           r_it = behaviors(r_it)->next_in_place(r_it))
+    for(; l_it != nullptr;
+        l_it = behaviors(l_it)->next_in_place(l_it), r_it = behaviors(r_it)->next_in_place(r_it))
     {
       if(!r_it)
       {
