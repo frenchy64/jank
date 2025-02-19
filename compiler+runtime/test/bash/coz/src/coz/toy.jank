@@ -1,0 +1,7 @@
+(ns coz.toy)
+
+(defn -main []
+  (let [a (future (prn "hi"))
+        b (future (prn "bye"))]
+    @a
+    @b))

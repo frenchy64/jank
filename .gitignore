@@ -50,3 +50,4 @@ rust/jank
 # CI thingies
 /llvm.sh
 /linux-install.sh
+profile.coz

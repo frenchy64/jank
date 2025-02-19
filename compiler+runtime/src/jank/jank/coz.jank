@@ -1,0 +1,12 @@
+(ns jank.coz)
+
+(defn progress!
+  ([] (jank.coz-native/progress))
+  ([n] (jank.coz-native/progress-named n)))
+(defn begin! [n] (jank.coz-native/begin n))
+(defn end! [n] (jank.coz-native/end n))
+(defmacro scope! [n & body]
+  `(let [n# ~n]
+     (begin! n#)
+     (try (do ~@body)
+       (finally (end! n#)))))
