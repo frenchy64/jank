@@ -4,9 +4,8 @@
 
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/context.hpp>
-#include <jank/runtime/visit.hpp>
 #include <jank/runtime/core/munge.hpp>
-#include <jank/runtime/behavior/number_like.hpp>
+#include <jank/runtime/rtti.hpp>
 #include <jank/analyze/processor.hpp>
 #include <jank/analyze/local_frame.hpp>
 #include <jank/detail/to_runtime_data.hpp>
@@ -247,14 +246,6 @@ namespace jank::analyze
     {
       return;
     }
-
-    auto const name(__rt_ctx->unique_symbol("const"));
-    auto const unboxed_name{ visit_number_like(
-      [&](auto const) -> option<obj::symbol> {
-        return obj::symbol{ name.ns, name.name + "__unboxed" };
-      },
-      []() -> option<obj::symbol> { return none; },
-      constant) };
 
     lifted_constant l{ constant };
     closest_fn.lifted_constants.emplace(constant, std::move(l));

@@ -2,10 +2,16 @@
 
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/obj/chunked_cons.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/core/make_box.hpp>
 #include <jank/runtime/core/seq.hpp>
+#include <jank/runtime/core/to_string.hpp>
+#include <jank/runtime/core.hpp>
 #include <jank/runtime/behavior/chunkable.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
+#include <jank/runtime/obj/array_chunk.hpp>
+#include <jank/runtime/obj/cons.hpp>
+#include <jank/runtime/obj/chunk_buffer.hpp>
 
 namespace jank::runtime::obj
 {
@@ -37,44 +43,29 @@ namespace jank::runtime::obj
 
   object_ptr chunked_cons::first() const
   {
-    return visit_object(
-      [&](auto const typed_head) -> object_ptr {
-        using T = typename decltype(typed_head)::value_type;
+    auto const bs(behaviors(head));
 
-        if constexpr(behavior::chunk_like<T>)
-        {
-          return typed_head->nth(make_box(0));
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid chunked cons head: {}",
-                                                typed_head->to_string()) };
-        }
-      },
-      head);
+    if(!bs->is_chunk_like)
+    {
+      throw std::runtime_error{ fmt::format("invalid chunked cons head: {}", bs->to_string(head)) };
+    }
+    return bs->nth(head, make_box(0));
   }
 
   object_ptr chunked_cons::next() const
   {
-    return visit_object(
-      [&](auto const typed_head) -> object_ptr {
-        using T = typename decltype(typed_head)::value_type;
+    auto const bs(behaviors(head));
 
-        if constexpr(behavior::chunk_like<T>)
-        {
-          if(1 < typed_head->count())
-          {
-            return make_box<chunked_cons>(typed_head->chunk_next(), tail);
-          }
-          return tail;
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid chunked cons head: {}",
-                                                typed_head->to_string()) };
-        }
-      },
-      head);
+    if(!bs->is_chunk_like)
+    {
+      throw std::runtime_error{ fmt::format("invalid chunked cons head: {}", bs->to_string(head)) };
+    }
+
+    if(1 < bs->count(head))
+    {
+      return make_box<chunked_cons>(bs->chunk_next(head), tail);
+    }
+    return tail;
   }
 
   static chunked_cons_ptr next_in_place_non_chunked(chunked_cons_ptr const o)
@@ -84,69 +75,50 @@ namespace jank::runtime::obj
       return nullptr;
     }
 
-    return visit_object(
-      [&](auto const typed_tail) -> chunked_cons_ptr {
-        using T = typename decltype(typed_tail)::value_type;
+    auto const tail(o->tail);
+    auto const bs(behaviors(tail));
 
-        if constexpr(behavior::sequenceable<T>)
-        {
-          o->head = typed_tail->first();
-          o->tail = typed_tail->next();
-          if(o->tail == nil::nil_const())
-          {
-            o->tail = nullptr;
-          }
-          return o;
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid sequence: {}", typed_tail->to_string()) };
-        }
-      },
-      o->tail);
+    if(!bs->is_sequenceable)
+    {
+      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs->to_string(tail)) };
+    }
+
+    o->head = bs->first(tail);
+    o->tail = bs->next(tail);
+    if(o->tail == nil::nil_const())
+    {
+      o->tail = nullptr;
+    }
+    return o;
   }
 
   chunked_cons_ptr chunked_cons::next_in_place()
   {
-    return visit_object(
-      [&](auto const typed_head) -> chunked_cons_ptr {
-        using T = typename decltype(typed_head)::value_type;
+    auto const bs(behaviors(head));
 
-        if constexpr(behavior::chunk_like<T>)
-        {
-          if(1 < typed_head->count())
-          {
-            head = typed_head->chunk_next();
-            return this;
-          }
-          return next_in_place_non_chunked(this);
-        }
-        else
-        {
-          return next_in_place_non_chunked(this);
-        }
-      },
-      head);
+    if(!bs->is_chunk_like)
+    {
+      return next_in_place_non_chunked(this);
+    }
+
+    if(1 < bs->count(head))
+    {
+      head = bs->chunk_next(head);
+      return this;
+    }
+    return next_in_place_non_chunked(this);
   }
 
   object_ptr chunked_cons::chunked_first() const
   {
-    return visit_object(
-      [&](auto const typed_head) -> object_ptr {
-        using T = typename decltype(typed_head)::value_type;
+    if(behaviors(head)->is_chunk_like)
+    {
+      return head;
+    }
 
-        if constexpr(behavior::chunk_like<T>)
-        {
-          return typed_head;
-        }
-        else
-        {
-          auto const buffer(make_box<chunk_buffer>(static_cast<size_t>(1)));
-          buffer->append(typed_head);
-          return buffer->chunk();
-        }
-      },
-      head);
+    auto const buffer(make_box<chunk_buffer>(static_cast<size_t>(1)));
+    buffer->append(head);
+    return buffer->chunk();
   }
 
   object_ptr chunked_cons::chunked_next() const
@@ -156,21 +128,22 @@ namespace jank::runtime::obj
 
   native_bool chunked_cons::equal(object const &o) const
   {
-    return visit_seqable(
-      [this](auto const typed_o) {
-        auto seq(typed_o->fresh_seq());
-        for(auto it(fresh_seq()); it != nullptr;
-            it = runtime::next_in_place(it), seq = runtime::next_in_place(seq))
-        {
-          if(seq == nullptr || !runtime::equal(it, seq->first()))
-          {
-            return false;
-          }
-        }
-        return true;
-      },
-      []() { return false; },
-      &o);
+    auto const bs(behaviors(&o));
+    if(!bs->is_seqable)
+    {
+      return false;
+    }
+    auto seq(bs->fresh_seq(&o));
+    //TODO next_in_place / first perf
+    for(object_ptr it(fresh_seq()); it != nullptr;
+        it = behaviors(it)->next_in_place(it), seq = behaviors(seq)->next_in_place(seq))
+    {
+      if(seq == nullptr || !runtime::equal(behaviors(it)->first(it), behaviors(seq)->first(seq)))
+      {
+        return false;
+      }
+    }
+    return true;
   }
 
   void chunked_cons::to_string(util::string_builder &buff) const

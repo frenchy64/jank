@@ -22,7 +22,6 @@ namespace jank::runtime
     }
   }
 
-  /* TODO: visit_number_like */
   object_ptr add(object_ptr const l, object_ptr const r)
   {
     return visit_number_like(

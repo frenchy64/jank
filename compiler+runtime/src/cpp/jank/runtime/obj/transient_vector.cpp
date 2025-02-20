@@ -25,6 +25,11 @@ namespace jank::runtime::obj
   {
   }
 
+  object_ptr transient_vector::create_empty() const
+  {
+    return empty();
+  }
+
   transient_vector_ptr transient_vector::empty()
   {
     return make_box<transient_vector>();

@@ -1,9 +1,12 @@
 #include <jank/runtime/obj/range.hpp>
+#include <jank/runtime/obj/array_chunk.hpp>
+#include <jank/runtime/obj/cons.hpp>
 #include <jank/runtime/obj/number.hpp>
 #include <jank/runtime/core/math.hpp>
 #include <jank/runtime/core/make_box.hpp>
 #include <jank/runtime/core/seq.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/core.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/behavior/metadatable.hpp>
 
 namespace jank::runtime::obj
@@ -202,22 +205,22 @@ namespace jank::runtime::obj
 
   native_bool range::equal(object const &o) const
   {
-    return visit_seqable(
-      [this](auto const typed_o) {
-        auto seq(typed_o->fresh_seq());
-        /* TODO: This is common code; can it be shared? */
-        for(auto it(fresh_seq()); it != nullptr;
-            it = runtime::next_in_place(it), seq = runtime::next_in_place(seq))
-        {
-          if(seq == nullptr || !runtime::equal(it, seq->first()))
-          {
-            return false;
-          }
-        }
-        return true;
-      },
-      []() { return false; },
-      &o);
+    auto const bs(behaviors(&o));
+    if(!bs->is_seqable)
+    {
+      return false;
+    }
+    auto seq(bs->fresh_seq(&o));
+    // TODO next_in_place / first perf
+    for(auto it(behaviors(this)->fresh_seq(this)); it != nullptr;
+        it = behaviors(it)->next_in_place(it), seq = behaviors(seq)->next_in_place(seq))
+    {
+      if(seq == nullptr || !runtime::equal(behaviors(it)->first(it), behaviors(seq)->first(seq)))
+      {
+        return false;
+      }
+    }
+    return true;
   }
 
   void range::to_string(util::string_builder &buff)

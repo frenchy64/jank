@@ -4,10 +4,28 @@
 #include <utility>
 
 #include <jank/c_api.h>
-#include <jank/runtime/visit.hpp>
+
+#include <jank/profile/time.hpp>
+#include <jank/runtime/behavior/callable.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/context.hpp>
 #include <jank/runtime/core.hpp>
-#include <jank/profile/time.hpp>
+#include <jank/runtime/core/to_string.hpp>
+#include <jank/runtime/obj/character.hpp>
+#include <jank/runtime/obj/jit_closure.hpp>
+#include <jank/runtime/obj/jit_function.hpp>
+#include <jank/runtime/obj/keyword.hpp>
+#include <jank/runtime/obj/nil.hpp>
+#include <jank/runtime/obj/persistent_hash_set.hpp>
+#include <jank/runtime/obj/persistent_hash_map.hpp>
+#include <jank/runtime/obj/persistent_list.hpp>
+#include <jank/runtime/obj/persistent_string.hpp>
+#include <jank/runtime/obj/symbol.hpp>
+#include <jank/runtime/obj/transient_hash_map.hpp>
+#include <jank/runtime/obj/transient_hash_set.hpp>
+#include <jank/runtime/obj/transient_vector.hpp>
+#include <jank/runtime/object.hpp>
+#include <jank/runtime/rtti.hpp>
 #include <jank/util/scope_exit.hpp>
 
 using namespace jank;
@@ -817,20 +835,53 @@ extern "C"
     return to_hash(o_obj);
   }
 
+  static native_integer to_integer_or_hash(object const *o)
+  {
+    if(o->type == object_type::integer)
+    {
+      return expect_object<obj::integer>(o)->data;
+    }
+
+    return to_hash(o);
+  }
+
+  jank_native_integer jank_to_integer(jank_object_ptr const o)
+  {
+    auto const o_obj(reinterpret_cast<object *>(o));
+    return to_integer_or_hash(o_obj);
+  }
+
+  jank_native_integer jank_shift_mask_case_integer(jank_object_ptr const o,
+                                                   jank_native_integer const shift,
+                                                   jank_native_integer const mask)
+  {
+    auto const o_obj(reinterpret_cast<object *>(o));
+    auto integer{ to_integer_or_hash(o_obj) };
+    if(mask != 0)
+    {
+      if(o_obj->type == object_type::integer)
+      {
+        /* We don't hash the integer if it's an int32 value. This is to be consistent with how keys are hashed in jank's
+         * case macro. */
+        integer = (integer >= std::numeric_limits<int32_t>::min()
+                   && integer <= std::numeric_limits<int32_t>::max())
+          ? integer
+          : hash::integer(integer);
+      }
+      integer = (integer >> shift) & mask;
+    }
+    return integer;
+  }
+
   void jank_set_meta(jank_object_ptr const o, jank_object_ptr const meta)
   {
     auto const o_obj(reinterpret_cast<object *>(o));
     auto const meta_obj(reinterpret_cast<object *>(meta));
-    runtime::visit_object(
-      [&](auto const typed_o) {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::metadatable<T>)
-        {
-          typed_o->meta = behavior::detail::validate_meta(meta_obj);
-        }
-      },
-      o_obj);
+    auto const bs(behaviors(o_obj));
+    if(bs->is_metadatable)
+    {
+      bs->set_meta(o_obj, meta_obj);
+    };
   }
 
   void jank_throw(jank_object_ptr const o)

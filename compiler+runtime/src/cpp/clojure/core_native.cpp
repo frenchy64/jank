@@ -6,7 +6,21 @@
 #include <jank/runtime/core.hpp>
 #include <jank/runtime/context.hpp>
 #include <jank/runtime/behavior/callable.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/rtti.hpp>
+#include <jank/runtime/obj/atom.hpp>
+#include <jank/runtime/obj/delay.hpp>
+#include <jank/runtime/obj/integer_range.hpp>
+#include <jank/runtime/obj/jit_function.hpp>
+#include <jank/runtime/obj/keyword.hpp>
+#include <jank/runtime/obj/lazy_sequence.hpp>
+#include <jank/runtime/obj/multi_function.hpp>
+#include <jank/runtime/obj/native_function_wrapper.hpp>
+#include <jank/runtime/obj/persistent_hash_map.hpp>
+#include <jank/runtime/obj/persistent_hash_set.hpp>
+#include <jank/runtime/obj/persistent_sorted_map.hpp>
+#include <jank/runtime/obj/persistent_sorted_set.hpp>
+#include <jank/runtime/obj/range.hpp>
 
 namespace clojure::core_native
 {
@@ -29,33 +43,28 @@ namespace clojure::core_native
 
   static object_ptr to_unqualified_symbol(object_ptr const o)
   {
-    return runtime::visit_object(
-      [&](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(std::same_as<T, obj::symbol>)
-        {
-          return typed_o;
-        }
-        else if constexpr(std::same_as<T, obj::persistent_string>)
-        {
-          return make_box<obj::symbol>(typed_o->data);
-        }
-        else if constexpr(std::same_as<T, var>)
-        {
-          return make_box<obj::symbol>(typed_o->n->name->name, typed_o->name->name);
-        }
-        else if constexpr(std::same_as<T, obj::keyword>)
-        {
-          return typed_o->sym;
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("can't convert {} to a symbol",
-                                                typed_o->to_code_string()) };
-        }
-      },
-      o);
+    if(is_symbol(o))
+    {
+      return o;
+    }
+    else if(is_string(o))
+    {
+      return make_box<obj::symbol>(expect_object<obj::persistent_string>(o)->data);
+    }
+    else if(is_var(o))
+    {
+      auto const v(expect_object<var>(o));
+      return make_box<obj::symbol>(v->n->name->name, v->name->name);
+    }
+    else if(is_keyword(o))
+    {
+      return expect_object<obj::keyword>(o)->sym;
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("can't convert {} to a symbol",
+                                            runtime::to_code_string(o)) };
+    }
   }
 
   static object_ptr to_qualified_symbol(object_ptr const ns, object_ptr const name)
@@ -66,11 +75,6 @@ namespace clojure::core_native
   static object_ptr lazy_seq(object_ptr const o)
   {
     return make_box<obj::lazy_sequence>(o);
-  }
-
-  static object_ptr is_var(object_ptr const o)
-  {
-    return make_box(o->type == object_type::var);
   }
 
   static object_ptr var_get(object_ptr const o)
@@ -373,7 +377,7 @@ jank_object_ptr jank_load_clojure_core_native()
   intern_fn("->unqualified-symbol", &core_native::to_unqualified_symbol);
   intern_fn("->qualified-symbol", &core_native::to_qualified_symbol);
   intern_fn("apply*", &apply_to);
-  intern_fn("counted?", &is_counter);
+  intern_fn("counted?", &is_countable);
   intern_fn("transientable?", &is_transientable);
   intern_fn("transient", &transient);
   intern_fn("persistent!", &persistent);
@@ -458,7 +462,7 @@ jank_object_ptr jank_load_clojure_core_native()
   intern_fn("named?", &is_named);
   intern_fn("name", &name);
   intern_fn("namespace", &namespace_);
-  intern_fn("var?", &core_native::is_var);
+  intern_fn("var?", &is_var);
   intern_fn("var-get", &core_native::var_get);
   intern_fn("intern-var", &core_native::intern_var);
   intern_fn("var-get-root", &core_native::var_get_root);
@@ -491,6 +495,8 @@ jank_object_ptr jank_load_clojure_core_native()
   intern_fn("prefers", &core_native::prefers);
   intern_val("int-min", std::numeric_limits<native_integer>::min());
   intern_val("int-max", std::numeric_limits<native_integer>::max());
+  intern_val("int32-min", std::numeric_limits<int32_t>::min());
+  intern_val("int32-max", std::numeric_limits<int32_t>::max());
   intern_fn("sleep", &core_native::sleep);
   intern_fn("current-time", &core_native::current_time);
   intern_fn("create-ns", &core_native::intern_ns);
@@ -546,20 +552,21 @@ jank_object_ptr jank_load_clojure_core_native()
         return obj::boolean::false_const();
       }
 
-      return visit_seqable(
-        [](auto const typed_rest, object_ptr const l) {
-          for(auto it(typed_rest->fresh_seq()); it != nullptr; it = it->next_in_place())
-          {
-            if(!equal(l, it->first()))
-            {
-              return obj::boolean::false_const();
-            }
-          }
+      auto const bs(behaviors(rest));
+      if(!bs->is_seqable)
+      {
+        throw std::runtime_error{ "not seqable: " + bs->to_code_string(rest) };
+      }
+      //TODO next_in_place / first perf
+      for(auto it(bs->fresh_seq(rest)); it != nullptr; it = behaviors(it)->next_in_place(it))
+      {
+        if(!equal(l, behaviors(it)->first(it)))
+        {
+          return obj::boolean::false_const();
+        }
+      }
 
-          return obj::boolean::true_const();
-        },
-        rest,
-        l);
+      return obj::boolean::true_const();
     };
     intern_fn_obj("=", fn);
   }

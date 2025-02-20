@@ -3,7 +3,8 @@
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/obj/cons.hpp>
 #include <jank/runtime/core.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
 
 namespace jank::runtime::obj
 {
@@ -46,46 +47,40 @@ namespace jank::runtime::obj
       return nullptr;
     }
 
-    visit_object(
-      [&](auto const typed_tail) {
-        using T = typename decltype(typed_tail)::value_type;
-
-        if constexpr(behavior::sequenceable<T>)
-        {
-          head = typed_tail->first();
-          tail = typed_tail->next();
-          if(tail == nil::nil_const())
-          {
-            tail = nullptr;
-          }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid sequence: {}", typed_tail->to_string()) };
-        }
-      },
-      tail);
+    auto const bs(behaviors(tail));
+    if(!bs->is_sequenceable)
+    {
+      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs->to_string(tail)) };
+    }
+    head = bs->first(tail);
+    tail = bs->next(tail);
+    if(tail == nil::nil_const())
+    {
+      tail = nullptr;
+    }
 
     return this;
   }
 
   native_bool cons::equal(object const &o) const
   {
-    return visit_seqable(
-      [this](auto const typed_o) {
-        auto seq(typed_o->fresh_seq());
-        for(auto it(fresh_seq()); it != nullptr;
-            it = runtime::next_in_place(it), seq = runtime::next_in_place(seq))
-        {
-          if(seq == nullptr || !runtime::equal(it, seq->first()))
-          {
-            return false;
-          }
-        }
-        return true;
-      },
-      []() { return false; },
-      &o);
+    auto const bs(behaviors(&o));
+    if(!bs->is_seqable)
+    {
+      return false;
+    }
+
+    auto seq(bs->fresh_seq(&o));
+    //TODO next_in_place / first perf
+    for(object_ptr it(fresh_seq()); it != nullptr;
+        it = behaviors(it)->next_in_place(it), seq = behaviors(seq)->next_in_place(seq))
+    {
+      if(seq == nullptr || !runtime::equal(behaviors(it)->first(it), behaviors(seq)->first(seq)))
+      {
+        return false;
+      }
+    }
+    return true;
   }
 
   void cons::to_string(util::string_builder &buff) const

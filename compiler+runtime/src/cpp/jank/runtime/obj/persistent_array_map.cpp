@@ -128,6 +128,12 @@ namespace jank::runtime::obj
     }
   }
 
+  object_ptr persistent_array_map::create_empty() const
+  {
+    static auto const ret(empty());
+    return meta.map_or(ret, [&](auto const m) { return ret->with_meta(m); });
+  }
+
   object_ptr persistent_array_map::call(object_ptr const o) const
   {
     auto const found(data.find(o));

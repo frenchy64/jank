@@ -35,6 +35,11 @@ namespace jank::runtime::obj
     }
   }
 
+  object_ptr transient_hash_map::create_empty() const
+  {
+    return empty();
+  }
+
   transient_hash_map_ptr transient_hash_map::empty()
   {
     return make_box<transient_hash_map>();

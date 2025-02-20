@@ -1,7 +1,11 @@
 #include <jank/runtime/obj/detail/iterator_sequence.hpp>
 #include <jank/runtime/core/seq.hpp>
 #include <jank/runtime/core/to_string.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/obj/cons.hpp>
+#include <jank/runtime/obj/persistent_hash_set_sequence.hpp>
+#include <jank/runtime/obj/persistent_sorted_set_sequence.hpp>
+#include <jank/runtime/obj/persistent_list_sequence.hpp>
 
 namespace jank::runtime
 {
@@ -29,20 +33,22 @@ namespace jank::runtime::obj::detail
   template <typename Derived, typename It>
   native_bool iterator_sequence<Derived, It>::equal(object const &o) const
   {
-    return visit_seqable(
-      [this](auto const typed_o) {
-        auto seq(typed_o->fresh_seq());
-        for(auto it(begin); it != end; ++it, seq = seq->next_in_place())
-        {
-          if(seq == nullptr || !runtime::equal(*it, seq->first()))
-          {
-            return false;
-          }
-        }
-        return true;
-      },
-      []() { return false; },
-      &o);
+    auto const bs(behaviors(&o));
+    if(!bs->is_seqable)
+    {
+      return false;
+    }
+
+    auto seq(bs->fresh_seq(&o));
+    //TODO next_in_place / first perf
+    for(auto it(begin); it != end; ++it, seq = behaviors(seq)->next_in_place(seq))
+    {
+      if(seq == nullptr || !runtime::equal(*it, behaviors(seq)->first(seq)))
+      {
+        return false;
+      }
+    }
+    return true;
   }
 
   template <typename Derived, typename It>

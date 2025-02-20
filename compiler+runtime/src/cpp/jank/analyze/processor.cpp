@@ -3,12 +3,15 @@
 #include <fmt/core.h>
 
 #include <jank/native_persistent_string/fmt.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/behavior/callable.hpp>
+#include <jank/runtime/obj/persistent_vector.hpp>
+#include <jank/runtime/obj/persistent_hash_map.hpp>
+#include <jank/runtime/obj/persistent_list_sequence.hpp>
+#include <jank/runtime/obj/persistent_vector_sequence.hpp>
+#include <jank/runtime/obj/keyword.hpp>
+#include <jank/runtime/rtti.hpp>
 #include <jank/runtime/context.hpp>
-#include <jank/runtime/behavior/number_like.hpp>
-#include <jank/runtime/behavior/sequential.hpp>
-#include <jank/runtime/behavior/map_like.hpp>
-#include <jank/runtime/behavior/set_like.hpp>
 #include <jank/runtime/core/truthy.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/analyze/processor.hpp>
@@ -47,6 +50,7 @@ namespace jank::analyze
       {   make_box<symbol>("var"), make_fn(&processor::analyze_var_call) },
       { make_box<symbol>("throw"),    make_fn(&processor::analyze_throw) },
       {   make_box<symbol>("try"),      make_fn(&processor::analyze_try) },
+      { make_box<symbol>("case*"),     make_fn(&processor::analyze_case) },
     };
   }
 
@@ -164,6 +168,127 @@ namespace jank::analyze
       qualified_sym,
       value_expr
     });
+  }
+
+  processor::expression_result processor::analyze_case(obj::persistent_list_ptr const &o,
+                                                       local_frame_ptr &f,
+                                                       expression_position const position,
+                                                       option<expr::function_context_ptr> const &fc,
+                                                       native_bool const needs_box)
+  {
+    if(auto const length(o->count()); length != 6)
+    {
+      return error::analysis_invalid_case("Invalid case*: exactly 6 parameters are needed.",
+                                          meta_source(o->meta));
+    }
+
+    auto it{ o->data.rest() };
+    if(it.first().is_none())
+    {
+      return error::analysis_invalid_case("Value expression is missing.", meta_source(o->meta));
+    }
+    auto const value_expr_obj{ it.first().unwrap() };
+    auto const value_expr{ analyze(value_expr_obj, f, expression_position::value, fc, needs_box) };
+    if(value_expr.is_err())
+    {
+      return error::analysis_invalid_case(value_expr.expect_err()->message, meta_source(o->meta));
+    }
+
+    it = it.rest();
+    if(it.first().is_none())
+    {
+      return error::analysis_invalid_case("Shift value is missing.", meta_source(o->meta));
+    }
+    auto const shift_obj{ it.first().unwrap() };
+    if(shift_obj.data->type != object_type::integer)
+    {
+      return error::analysis_invalid_case("Shift value should be an integer.",
+                                          meta_source(o->meta));
+    }
+    auto const shift{ runtime::expect_object<runtime::obj::integer>(shift_obj) };
+
+    it = it.rest();
+    if(it.first().is_none())
+    {
+      return error::analysis_invalid_case("Mask value is missing.", meta_source(o->meta));
+    }
+    auto const mask_obj{ it.first().unwrap() };
+    if(mask_obj.data->type != object_type::integer)
+    {
+      return error::analysis_invalid_case("Mask value should be an integer.", meta_source(o->meta));
+    }
+    auto const mask{ runtime::expect_object<runtime::obj::integer>(mask_obj) };
+
+    it = it.rest();
+    if(it.first().is_none())
+    {
+      return error::analysis_invalid_case("Default expression is missing.", meta_source(o->meta));
+    }
+    auto const default_expr_obj{ it.first().unwrap() };
+    auto const default_expr{ analyze(default_expr_obj, f, position, fc, needs_box) };
+
+    it = it.rest();
+    if(it.first().is_none())
+    {
+      return error::analysis_invalid_case("Keys and expressions are missing.",
+                                          meta_source(o->meta));
+    }
+    auto const imap_obj{ it.first().unwrap() };
+
+    struct keys_and_exprs
+    {
+      native_vector<native_integer> keys{};
+      native_vector<expression_ptr> exprs{};
+    };
+
+    auto const keys_exprs{
+      [&](auto const imap_obj) -> string_result<keys_and_exprs> {
+        auto const bs(behaviors(imap_obj));
+        if(!bs->is_map)
+        {
+          return err("Case keys and expressions should be a map-like.");
+        }
+        keys_and_exprs ret{};
+        //TODO next / first perf
+        for(auto seq{ bs->seq(imap_obj) }; seq != nullptr; seq = behaviors(seq)->next(seq))
+        {
+          auto const e{ behaviors(seq)->first(seq) };
+          auto const k_obj{ runtime::nth(e, make_box(0)) };
+          auto const v_obj{ runtime::nth(e, make_box(1)) };
+          if(k_obj.data->type != object_type::integer)
+          {
+            return err("Map key for case* is expected to be an integer.");
+          }
+          auto const key{ runtime::expect_object<obj::integer>(k_obj) };
+          auto const expr{ analyze(v_obj, f, position, fc, needs_box) };
+          if(expr.is_err())
+          {
+            return err(expr.expect_err()->message);
+          }
+          ret.keys.push_back(key->data);
+          ret.exprs.push_back(expr.expect_ok());
+        }
+        return ret;
+      }(imap_obj) };
+
+    if(keys_exprs.is_err())
+    {
+      return error::analysis_invalid_case(keys_exprs.expect_err(), meta_source(o->meta));
+    }
+
+    auto case_expr{
+      make_box<expression>(expr::case_<expression>{
+                                                   expression_base{ {}, position, f, needs_box },
+                                                   value_expr.expect_ok(),
+                                                   shift->data,
+                                                   mask->data,
+                                                   default_expr.expect_ok(),
+                                                   keys_exprs.expect_ok().keys,
+                                                   keys_exprs.expect_ok().exprs,
+                                                   }
+      )
+    };
+    return case_expr;
   }
 
   processor::expression_result processor::analyze_symbol(runtime::obj::symbol_ptr const &sym,
@@ -440,31 +565,28 @@ namespace jank::analyze
       {
         auto arity_list_obj(it.first().unwrap());
 
-        auto const err(runtime::visit_object(
-          [&](auto const typed_arity_list) -> result<void, error_ptr> {
-            using T = typename decltype(typed_arity_list)::value_type;
+        auto const err([&]() -> result<void, error_ptr> {
+          auto const bs(behaviors(arity_list_obj));
+          if(bs->is_sequenceable)
+          {
+            auto arity_list(runtime::obj::persistent_list::create(arity_list_obj));
 
-            if constexpr(runtime::behavior::sequenceable<T>)
+            auto result(analyze_fn_arity(arity_list.data, name, current_frame));
+            if(result.is_err())
             {
-              auto arity_list(runtime::obj::persistent_list::create(typed_arity_list));
-
-              auto result(analyze_fn_arity(arity_list.data, name, current_frame));
-              if(result.is_err())
-              {
-                return result.expect_err_move();
-              }
-              arities.emplace_back(result.expect_ok_move());
-              return ok();
+              return result.expect_err_move();
             }
-            else
-            {
-              return error::analysis_invalid_fn(
-                "Invalid 'fn' syntax. Please provide either a list of arities or a "
-                "parameter vector",
-                meta_source(list));
-            }
-          },
-          arity_list_obj));
+            arities.emplace_back(result.expect_ok_move());
+            return ok();
+          }
+          else
+          {
+            return error::analysis_invalid_fn(
+              "Invalid 'fn' syntax. Please provide either a list of arities or a "
+              "parameter vector",
+              meta_source(list));
+          }
+        }());
 
         if(err.is_err())
         {
@@ -1038,36 +1160,36 @@ namespace jank::analyze
     static runtime::obj::symbol catch_{ "catch" }, finally_{ "finally" };
     native_bool has_catch{}, has_finally{};
 
-    for(auto it(next_in_place(list->fresh_seq())); it != nullptr; it = next_in_place(it))
+    auto init(list->fresh_seq());
+    for(auto it(init == nullptr ? init : init->next_in_place()); it != nullptr;
+        it = it->next_in_place())
     {
       auto const item(it->first());
-      auto const type(runtime::visit_seqable(
-        [](auto const typed_item) {
-          using T = typename decltype(typed_item)::value_type;
+      auto const type([](auto const item) {
+        if(is_nil(item))
+        {
+          return try_expression_type::other;
+        }
 
-          if constexpr(std::same_as<T, obj::nil>)
-          {
-            return try_expression_type::other;
-          }
-          else
-          {
-            auto const first(typed_item->seq()->first());
-            if(runtime::equal(first, &catch_))
-            {
-              return try_expression_type::catch_;
-            }
-            else if(runtime::equal(first, &finally_))
-            {
-              return try_expression_type::finally_;
-            }
-            else
-            {
-              return try_expression_type::other;
-            }
-          }
-        },
-        []() { return try_expression_type::other; },
-        item));
+        auto const bs(behaviors(item));
+        if(!bs->is_seqable)
+        {
+          return try_expression_type::other;
+        }
+        auto const f(first(bs->seq(item)));
+        if(runtime::equal(f, &catch_))
+        {
+          return try_expression_type::catch_;
+        }
+        else if(runtime::equal(f, &finally_))
+        {
+          return try_expression_type::finally_;
+        }
+        else
+        {
+          return try_expression_type::other;
+        }
+      }(item));
 
       switch(type)
       {
@@ -1219,7 +1341,7 @@ namespace jank::analyze
     native_vector<expression_ptr> exprs;
     exprs.reserve(o->count());
     native_bool literal{ true };
-    for(auto d = o->fresh_seq(); d != nullptr; d = next_in_place(d))
+    for(auto d = o->fresh_seq(); d != nullptr; d = d->next_in_place())
     {
       auto res(analyze(d->first(), current_frame, expression_position::value, fn_ctx, true));
       if(res.is_err())
@@ -1267,51 +1389,36 @@ namespace jank::analyze
                          native_bool const)
   {
     /* TODO: Detect literal and act accordingly. */
-    return visit_map_like(
-      [&](auto const typed_o) -> processor::expression_result {
-        using T = typename decltype(typed_o)::value_type;
+    auto const bs(behaviors(o));
+    native_vector<std::pair<expression_ptr, expression_ptr>> exprs;
+    exprs.reserve(bs->count(o));
 
-        native_vector<std::pair<expression_ptr, expression_ptr>> exprs;
-        exprs.reserve(typed_o->data.size());
+    // TODO next_in_place / first perf
+    for(auto d = bs->fresh_seq(o); d != nullptr; d = behaviors(d)->next_in_place(d))
+    {
+      auto const kv(runtime::first(d));
 
-        for(auto const &kv : typed_o->data)
-        {
-          /* The two maps (hash and sorted) have slightly different iterators, so we need to
-           * pull out the entries differently. */
-          object_ptr first{}, second{};
-          if constexpr(std::same_as<T, obj::persistent_sorted_map>)
-          {
-            auto const &entry(kv.get());
-            first = entry.first;
-            second = entry.second;
-          }
-          else
-          {
-            first = kv.first;
-            second = kv.second;
-          }
+      auto k_expr(
+        analyze(runtime::first(kv), current_frame, expression_position::value, fn_ctx, true));
+      if(k_expr.is_err())
+      {
+        return k_expr.expect_err_move();
+      }
+      auto v_expr(
+        analyze(runtime::second(kv), current_frame, expression_position::value, fn_ctx, true));
+      if(v_expr.is_err())
+      {
+        return v_expr.expect_err_move();
+      }
+      exprs.emplace_back(k_expr.expect_ok_move(), v_expr.expect_ok_move());
+    }
 
-          auto k_expr(analyze(first, current_frame, expression_position::value, fn_ctx, true));
-          if(k_expr.is_err())
-          {
-            return k_expr.expect_err_move();
-          }
-          auto v_expr(analyze(second, current_frame, expression_position::value, fn_ctx, true));
-          if(v_expr.is_err())
-          {
-            return v_expr.expect_err_move();
-          }
-          exprs.emplace_back(k_expr.expect_ok_move(), v_expr.expect_ok_move());
-        }
-
-        /* TODO: Uniqueness check. */
-        return make_box<expression>(expr::map<expression>{
-          expression_base{ {}, position, current_frame, true },
-          std::move(exprs),
-          typed_o->meta,
-        });
-      },
-      o);
+    /* TODO: Uniqueness check. */
+    return make_box<expression>(expr::map<expression>{
+      expression_base{ {}, position, current_frame, true },
+      std::move(exprs),
+      bs->meta(o),
+    });
   }
 
   processor::expression_result
@@ -1321,51 +1428,53 @@ namespace jank::analyze
                          option<expr::function_context_ptr> const &fn_ctx,
                          native_bool const)
   {
-    return visit_set_like(
-      [&](auto const typed_o) -> processor::expression_result {
-        native_vector<expression_ptr> exprs;
-        exprs.reserve(typed_o->count());
-        native_bool literal{ true };
-        for(auto d = typed_o->fresh_seq(); d != nullptr; d = next_in_place(d))
-        {
-          auto res(analyze(d->first(), current_frame, expression_position::value, fn_ctx, true));
-          if(res.is_err())
-          {
-            return res.expect_err_move();
-          }
-          exprs.emplace_back(res.expect_ok_move());
-          if(!boost::get<expr::primitive_literal<expression>>(&exprs.back()->data))
-          {
-            literal = false;
-          }
-        }
+    auto const bs(behaviors(o));
+    if(!bs->is_set)
+    {
+      return error::internal_analysis_failure("not set-like: " + bs->to_code_string(o));
+    }
+    native_vector<expression_ptr> exprs;
+    exprs.reserve(bs->count(o));
+    native_bool literal{ true };
+    //TODO next_in_place / first perf
+    for(auto d = bs->fresh_seq(o); d != nullptr; d = behaviors(d)->next_in_place(d))
+    {
+      auto res(analyze(runtime::first(d), current_frame, expression_position::value, fn_ctx, true));
+      if(res.is_err())
+      {
+        return res.expect_err_move();
+      }
+      exprs.emplace_back(res.expect_ok_move());
+      if(!boost::get<expr::primitive_literal<expression>>(&exprs.back()->data))
+      {
+        literal = false;
+      }
+    }
 
-        if(literal)
-        {
-          /* Eval the literal to resolve exprs such as quotes. */
-          auto const pre_eval_expr(make_box<expression>(expr::set<expression>{
-            expression_base{ {}, position, current_frame, true },
-            std::move(exprs),
-            typed_o->meta
-          }));
-          auto const constant(evaluate::eval(pre_eval_expr));
+    if(literal)
+    {
+      /* Eval the literal to resolve exprs such as quotes. */
+      auto const pre_eval_expr(make_box<expression>(expr::set<expression>{
+        expression_base{ {}, position, current_frame, true },
+        std::move(exprs),
+        bs->meta(o)
+      }));
+      auto const constant(evaluate::eval(pre_eval_expr));
 
-          /* TODO: Order lifted constants. Use sub constants during codegen. */
-          current_frame->lift_constant(constant);
+      /* TODO: Order lifted constants. Use sub constants during codegen. */
+      current_frame->lift_constant(constant);
 
-          return make_box<expression>(expr::primitive_literal<expression>{
-            expression_base{ {}, position, current_frame, true },
-            constant
-          });
-        }
+      return make_box<expression>(expr::primitive_literal<expression>{
+        expression_base{ {}, position, current_frame, true },
+        constant
+      });
+    }
 
-        return make_box<expression>(expr::set<expression>{
-          expression_base{ {}, position, current_frame, true },
-          std::move(exprs),
-          typed_o->meta,
-        });
-      },
-      o);
+    return make_box<expression>(expr::set<expression>{
+      expression_base{ {}, position, current_frame, true },
+      std::move(exprs),
+      bs->meta(o)
+    });
   }
 
   processor::expression_result
@@ -1554,62 +1663,73 @@ namespace jank::analyze
                                               read::source::unknown);
     }
 
-    return runtime::visit_object(
-      [&](auto const typed_o) -> processor::expression_result {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(std::same_as<T, runtime::obj::persistent_list>)
-        {
-          return analyze_call(typed_o, current_frame, position, fn_ctx, needs_box);
-        }
-        else if constexpr(std::same_as<T, runtime::obj::persistent_vector>)
-        {
-          return analyze_vector(typed_o, current_frame, position, fn_ctx, needs_box);
-        }
-        else if constexpr(runtime::behavior::map_like<T>)
-        {
-          return analyze_map(typed_o, current_frame, position, fn_ctx, needs_box);
-        }
-        else if constexpr(runtime::behavior::set_like<T>)
-        {
-          return analyze_set(typed_o, current_frame, position, fn_ctx, needs_box);
-        }
-        else if constexpr(runtime::behavior::number_like<T>
-                          || std::same_as<T, runtime::obj::boolean>
-                          || std::same_as<T, runtime::obj::keyword>
-                          || std::same_as<T, runtime::obj::nil>
-                          || std::same_as<T, runtime::obj::persistent_string>
-                          || std::same_as<T, runtime::obj::character>)
-        {
-          return analyze_primitive_literal(o, current_frame, position, fn_ctx, needs_box);
-        }
-        else if constexpr(std::same_as<T, runtime::obj::symbol>)
-        {
-          return analyze_symbol(typed_o, current_frame, position, fn_ctx, needs_box);
-        }
-        /* This is used when building code from macros; they may end up being other forms of
-         * sequences and not just lists. */
-        if constexpr(runtime::behavior::sequential<T>)
-        {
-          return analyze_call(runtime::obj::persistent_list::create(typed_o->seq()),
-                              current_frame,
-                              position,
-                              fn_ctx,
-                              needs_box);
-        }
-        else if constexpr(std::same_as<T, runtime::var>)
-        {
-          return analyze_var_val(typed_o, current_frame, position, fn_ctx, needs_box);
-        }
-        else
-        {
-          return error::internal_analysis_failure(
-            fmt::format("Unimplemented analysis for object type '{}'",
-                        object_type_str(typed_o->base.type)),
-            meta_source(o));
-        }
-      },
-      o);
+    // TODO switch by concept
+    auto const bs(behaviors(o));
+    auto const otype(o->type);
+    if(otype == runtime::object_type::persistent_list)
+    {
+      return analyze_call(expect_object<runtime::obj::persistent_list>(o),
+                          current_frame,
+                          position,
+                          fn_ctx,
+                          needs_box);
+    }
+    else if(otype == runtime::object_type::persistent_vector)
+    {
+      return analyze_vector(expect_object<runtime::obj::persistent_vector>(o),
+                            current_frame,
+                            position,
+                            fn_ctx,
+                            needs_box);
+    }
+    else if(bs->is_map)
+    {
+      return analyze_map(o, current_frame, position, fn_ctx, needs_box);
+    }
+    else if(bs->is_set)
+    {
+      return analyze_set(o, current_frame, position, fn_ctx, needs_box);
+    }
+    else if(bs->is_number_like || otype == runtime::object_type::boolean
+            || otype == runtime::object_type::keyword || otype == runtime::object_type::nil
+            || otype == runtime::object_type::persistent_string
+            || otype == runtime::object_type::character)
+    {
+      return analyze_primitive_literal(o, current_frame, position, fn_ctx, needs_box);
+    }
+    else if(otype == runtime::object_type::symbol)
+    {
+      return analyze_symbol(try_object<runtime::obj::symbol>(o),
+                            current_frame,
+                            position,
+                            fn_ctx,
+                            needs_box);
+    }
+    /* This is used when building code from macros; they may end up being other forms of
+     * sequences and not just lists. */
+    if(bs->is_sequential)
+    {
+      return analyze_call(runtime::obj::persistent_list::create(bs->seq(o)),
+                          current_frame,
+                          position,
+                          fn_ctx,
+                          needs_box);
+    }
+    else if(otype == runtime::object_type::var)
+    {
+      return analyze_var_val(try_object<runtime::var>(o),
+                             current_frame,
+                             position,
+                             fn_ctx,
+                             needs_box);
+    }
+    else
+    {
+      return error::internal_analysis_failure(
+        fmt::format("Unimplemented analysis for object type '{}'",
+                    object_type_str(bs->base(o).type)),
+        meta_source(o));
+    }
   }
 
   native_bool processor::is_special(runtime::object_ptr const form)

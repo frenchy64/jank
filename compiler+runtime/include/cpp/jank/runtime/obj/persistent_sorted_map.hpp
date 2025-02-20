@@ -50,6 +50,8 @@ namespace jank::runtime::obj
       return ret;
     }
 
+    object_ptr create_empty() const;
+
     using base_persistent_map::base_persistent_map;
 
     template <typename... Args>

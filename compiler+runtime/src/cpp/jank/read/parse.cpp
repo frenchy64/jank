@@ -6,14 +6,21 @@
 #include <jank/read/parse.hpp>
 #include <jank/error/parse.hpp>
 #include <jank/util/escape.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/rtti.hpp>
 #include <jank/runtime/context.hpp>
 #include <jank/runtime/core.hpp>
-#include <jank/runtime/obj/symbol.hpp>
+#include <jank/runtime/obj/keyword.hpp>
+#include <jank/runtime/obj/persistent_hash_map.hpp>
+#include <jank/runtime/obj/persistent_hash_set.hpp>
+#include <jank/runtime/obj/persistent_list_sequence.hpp>
+#include <jank/runtime/obj/persistent_vector_sequence.hpp>
 #include <jank/runtime/obj/ratio.hpp>
+#include <jank/runtime/obj/symbol.hpp>
 #include <jank/runtime/behavior/map_like.hpp>
 #include <jank/runtime/behavior/set_like.hpp>
 #include <jank/util/scope_exit.hpp>
+#include <jank/runtime/behaviors.hpp>
 
 namespace jank::read::parse
 {
@@ -471,27 +478,25 @@ namespace jank::read::parse
       return error::parse_invalid_meta_hint_value({ start_token.start, latest_token.end });
     }
 
-    auto meta_result(visit_object(
-      [&](auto const typed_val) -> processor::object_result {
-        using T = typename decltype(typed_val)::value_type;
-        if constexpr(std::same_as<T, obj::keyword>)
-        {
-          return object_source_info{
-            obj::persistent_array_map::create_unique(typed_val, obj::boolean::true_const()),
-            start_token,
-            latest_token
-          };
-        }
-        if constexpr(behavior::map_like<T>)
-        {
-          return object_source_info{ typed_val, start_token, latest_token };
-        }
-        else
-        {
-          return error::parse_invalid_meta_hint_value({ start_token.start, latest_token.end });
-        }
-      },
-      meta_val_result.expect_ok().unwrap().ptr));
+    auto meta_result([&](auto const val) -> processor::object_result {
+      if(is_keyword(val))
+      {
+        return object_source_info{
+          obj::persistent_array_map::create_unique(val, obj::boolean::true_const()),
+          start_token,
+          latest_token
+        };
+      }
+      auto const bs(behaviors(val));
+      if(bs->is_map)
+      {
+        return object_source_info{ val, start_token, latest_token };
+      }
+      else
+      {
+        return error::parse_invalid_meta_hint_value({ start_token.start, latest_token.end });
+      }
+    }(meta_val_result.expect_ok().unwrap().ptr));
     if(meta_result.is_err())
     {
       return meta_result;
@@ -508,34 +513,23 @@ namespace jank::read::parse
                                                    "Value missing after hint");
     }
 
-    return visit_object(
-      [&](auto const typed_val) -> processor::object_result {
-        using T = typename decltype(typed_val)::value_type;
-        if constexpr(behavior::metadatable<T>)
-        {
-          if(typed_val->meta.is_none())
-          {
-            return object_source_info{ typed_val->with_meta(meta_result.expect_ok().unwrap().ptr),
-                                       start_token,
-                                       latest_token };
-          }
-          else
-          {
-            return object_source_info{ typed_val->with_meta(
-                                         merge(typed_val->meta.unwrap(),
-                                               meta_result.expect_ok().unwrap().ptr)),
-                                       start_token,
-                                       latest_token };
-          }
-        }
-        else
-        {
-          return error::parse_invalid_meta_hint_target(
-            { start_token.start, latest_token.end },
-            "Target value for meta hint must accept metadata");
-        }
-      },
-      target_val_result.expect_ok().unwrap().ptr);
+    auto const res(target_val_result.expect_ok().unwrap().ptr);
+    auto const bs(behaviors(res));
+
+    if(bs->is_metadatable)
+    {
+      auto const m(bs->get_meta(res));
+      auto const mr(meta_result.expect_ok().unwrap().ptr);
+      return object_source_info{ bs->with_meta(res, is_nil(m) ? mr : merge(m, mr)),
+                                 start_token,
+                                 latest_token };
+    }
+    else
+    {
+      return error::parse_invalid_meta_hint_target(
+        { start_token.start, latest_token.end },
+        "Target value for meta hint must accept metadata");
+    }
   }
 
   processor::object_result processor::parse_reader_macro()
@@ -800,29 +794,31 @@ namespace jank::read::parse
           }
 
           auto const s(next_in_place(it)->first());
-          return visit_seqable(
-            [&](auto const typed_s) -> processor::object_result {
-              auto const seq(typed_s->fresh_seq());
-              if(!seq)
-              {
-                return ok(none);
-              }
-              auto const first(seq->first());
+          auto const s_bs(behaviors(s));
+          if(!s_bs->is_seqable)
+          {
+            /* TODO: Get the source of just this form. */
+            return error::parse_invalid_reader_splice({ start_token.start, latest_token.end },
+                                                      "#?@ must be used on a sequence");
+          }
+          auto const seq(s_bs->fresh_seq(s));
+          if(!seq)
+          {
+            return ok(none);
+          }
 
-              auto const front(pending_forms.begin());
-              for(auto it(next_in_place(seq)); it != nullptr; it = next_in_place(it))
-              {
-                pending_forms.insert(front, it->first());
-              }
+          auto const seq_bs(behaviors(seq));
+          auto const first(seq_bs->first(seq));
 
-              return object_source_info{ first, start_token, list_end };
-            },
-            [&]() -> processor::object_result {
-              /* TODO: Get the source of just this form. */
-              return error::parse_invalid_reader_splice({ start_token.start, latest_token.end },
-                                                        "#?@ must be used on a sequence");
-            },
-            s);
+          auto const front(pending_forms.begin());
+          //TODO next_in_place / first perf
+          for(auto it(seq_bs->next_in_place(seq)); it != nullptr;
+              it = behaviors(it)->next_in_place(it))
+          {
+            pending_forms.insert(front, behaviors(it)->first(it));
+          }
+
+          return object_source_info{ first, start_token, list_end };
         }
         else
         {
@@ -843,42 +839,41 @@ namespace jank::read::parse
       return obj::nil::nil_const();
     }
 
-    return visit_seqable(
-      [this](auto const typed_seq) -> result<object_ptr, error_ptr> {
-        runtime::detail::native_transient_vector ret;
-        for(auto it(typed_seq->fresh_seq()); it != nullptr; it = next_in_place(it))
-        {
-          auto const item(it->first());
+    auto const bs(behaviors(seq));
+    if(!bs->is_seqable)
+    {
+      return err(error::internal_parse_failure("syntax_quote_expand_seq arg not seqable"));
+    }
 
-          if(syntax_quote_is_unquote(item, false))
-          {
-            ret.push_back(make_box<obj::persistent_list>(std::in_place,
-                                                         make_box<obj::symbol>("clojure.core/list"),
-                                                         second(item)));
-          }
-          else if(syntax_quote_is_unquote(item, true))
-          {
-            ret.push_back(second(item));
-          }
-          else
-          {
-            auto quoted_item(syntax_quote(item));
-            if(quoted_item.is_err())
-            {
-              return quoted_item;
-            }
-            ret.push_back(make_box<obj::persistent_list>(std::in_place,
-                                                         make_box<obj::symbol>("clojure.core/list"),
-                                                         quoted_item.expect_ok()));
-          }
+    runtime::detail::native_transient_vector ret;
+    for(auto it(bs->fresh_seq(seq)); it != nullptr; it = behaviors(it)->next_in_place(it))
+    {
+      auto const item(behaviors(it)->first(it));
+
+      if(syntax_quote_is_unquote(item, false))
+      {
+        ret.push_back(make_box<obj::persistent_list>(std::in_place,
+                                                     make_box<obj::symbol>("clojure.core/list"),
+                                                     second(item)));
+      }
+      else if(syntax_quote_is_unquote(item, true))
+      {
+        ret.push_back(second(item));
+      }
+      else
+      {
+        auto quoted_item(syntax_quote(item));
+        if(quoted_item.is_err())
+        {
+          return quoted_item;
         }
-        auto const vec(make_box<obj::persistent_vector>(ret.persistent())->seq());
-        return vec ?: obj::nil::nil_const();
-      },
-      []() -> result<object_ptr, error_ptr> {
-        return err(error::internal_parse_failure("syntax_quote_expand_seq arg not seqable"));
-      },
-      seq);
+        ret.push_back(make_box<obj::persistent_list>(std::in_place,
+                                                     make_box<obj::symbol>("clojure.core/list"),
+                                                     quoted_item.expect_ok()));
+      }
+    }
+    auto const vec(make_box<obj::persistent_vector>(ret.persistent())->seq());
+    return vec ?: obj::nil::nil_const();
   }
 
   result<object_ptr, error_ptr> processor::syntax_quote_flatten_map(object_ptr const seq)
@@ -888,45 +883,44 @@ namespace jank::read::parse
       return obj::nil::nil_const();
     }
 
-    return visit_seqable(
-      [](auto const typed_seq) -> result<object_ptr, error_ptr> {
-        runtime::detail::native_transient_vector ret;
-        for(auto it(typed_seq->fresh_seq()); it != nullptr; it = next_in_place(it))
-        {
-          auto item(it->first());
-          ret.push_back(first(item));
-          ret.push_back(second(item));
-        }
-        auto const vec(make_box<obj::persistent_vector>(ret.persistent())->seq());
-        return vec ?: obj::nil::nil_const();
-      },
-      []() -> result<object_ptr, error_ptr> {
-        return err(error::internal_parse_failure("syntax_quote_flatten_map arg is not a seq"));
-      },
-      seq);
+    auto const bs(behaviors(seq));
+    if(!bs->is_seqable)
+    {
+      return err(error::internal_parse_failure("syntax_quote_flatten_map arg is not a seq"));
+    }
+
+    runtime::detail::native_transient_vector ret;
+    for(auto it(bs->fresh_seq(seq)); it != nullptr; it = behaviors(it)->next_in_place(it))
+    {
+      auto item(behaviors(it)->first(it));
+      ret.push_back(first(item));
+      ret.push_back(second(item));
+    }
+    auto const vec(make_box<obj::persistent_vector>(ret.persistent())->seq());
+    return vec ?: obj::nil::nil_const();
   }
 
   native_bool processor::syntax_quote_is_unquote(object_ptr const form, native_bool const splice)
   {
-    return visit_seqable(
-      [splice](auto const typed_form) {
-        object_ptr item{};
-        auto const s(typed_form->seq());
-        if(!s)
-        {
-          item = obj::nil::nil_const();
-        }
-        else
-        {
-          item = s->first();
-        }
+    auto const bs(behaviors(form));
+    if(!bs->is_seqable)
+    {
+      return false;
+    }
+    object_ptr item{};
+    auto const s(bs->seq(form));
+    if(!s)
+    {
+      item = obj::nil::nil_const();
+    }
+    else
+    {
+      item = first(s);
+    }
 
-        return make_box<obj::symbol>(
-                 (splice ? "clojure.core/unquote-splicing" : "clojure.core/unquote"))
-          ->equal(*item);
-      },
-      [] { return false; },
-      form);
+    return make_box<obj::symbol>(
+             (splice ? "clojure.core/unquote-splicing" : "clojure.core/unquote"))
+      ->equal(*item);
   }
 
   result<object_ptr, error_ptr> processor::syntax_quote(object_ptr const form)
@@ -994,90 +988,85 @@ namespace jank::read::parse
       /* Handle all sorts of sequences. We do this by recursively walking through them,
        * flattening them, qualifying the symbols, and then building up code which will
        * reassemble them. */
-      return visit_seqable(
-        [&](auto const typed_form) -> result<object_ptr, error_ptr> {
-          using T = typename decltype(typed_form)::value_type;
+      auto const bs(behaviors(form));
 
-          if constexpr(std::same_as<T, obj::persistent_vector>)
-          {
-            auto expanded(syntax_quote_expand_seq(typed_form->seq()));
-            if(expanded.is_err())
-            {
-              return expanded;
-            }
+      /* For anything else, do nothing special aside from quoting. Hopefully that works. */
+      if(!bs->is_seqable)
+      {
+        return make_box<obj::persistent_list>(std::in_place, make_box<obj::symbol>("quote"), form);
+      }
 
-            return make_box<obj::persistent_list>(
-              std::in_place,
-              make_box<obj::symbol>("clojure.core/apply"),
-              make_box<obj::symbol>("clojure.core/vector"),
-              make_box<obj::persistent_list>(
-                std::in_place,
-                make_box<obj::symbol>("clojure.core/seq"),
-                conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat"))));
-          }
-          if constexpr(behavior::map_like<T>)
-          {
-            auto flattened(syntax_quote_flatten_map(typed_form->seq()));
-            if(flattened.is_err())
-            {
-              return flattened;
-            }
+      auto const seq(bs->seq(form));
+      if(form->type == object_type::persistent_vector)
+      {
+        auto expanded(syntax_quote_expand_seq(seq));
+        if(expanded.is_err())
+        {
+          return expanded;
+        }
 
-            auto expanded(syntax_quote_expand_seq(flattened.expect_ok()));
-            if(expanded.is_err())
-            {
-              return expanded;
-            }
+        return make_box<obj::persistent_list>(
+          std::in_place,
+          make_box<obj::symbol>("clojure.core/apply"),
+          make_box<obj::symbol>("clojure.core/vector"),
+          make_box<obj::persistent_list>(
+            std::in_place,
+            make_box<obj::symbol>("clojure.core/seq"),
+            conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat"))));
+      }
+      if(bs->is_map)
+      {
+        auto flattened(syntax_quote_flatten_map(seq));
+        if(flattened.is_err())
+        {
+          return flattened;
+        }
 
-            return make_box<obj::persistent_list>(
-              std::in_place,
-              make_box<obj::symbol>("clojure.core/apply"),
-              make_box<obj::symbol>("clojure.core/hash-map"),
-              make_box<obj::persistent_list>(
-                std::in_place,
-                make_box<obj::symbol>("clojure.core/seq"),
-                conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat"))));
-          }
-          if constexpr(behavior::set_like<T>)
-          {
-            return err(error::internal_parse_failure("nyi: set"));
-          }
-          if constexpr(std::same_as<T, obj::persistent_list>)
-          {
-            auto const seq(typed_form->seq());
-            if(!seq)
-            {
-              return make_box<obj::persistent_list>(std::in_place,
-                                                    make_box<obj::symbol>("clojure.core/list"));
-            }
-            else
-            {
-              auto expanded(syntax_quote_expand_seq(seq));
-              if(expanded.is_err())
-              {
-                return expanded;
-              }
+        auto expanded(syntax_quote_expand_seq(flattened.expect_ok()));
+        if(expanded.is_err())
+        {
+          return expanded;
+        }
 
-              return make_box<obj::persistent_list>(
-                std::in_place,
-                make_box<obj::symbol>("clojure.core/seq"),
-                conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat")));
-            }
-          }
-          else
-          {
-            return err(
-              error::internal_parse_failure(fmt::format("Unsupported collection type: {}",
-                                                        object_type_str(typed_form->base.type))));
-          }
-        },
-        /* For anything else, do nothing special aside from quoting. Hopefully that works. */
-        [=]() -> result<object_ptr, error_ptr> {
+        return make_box<obj::persistent_list>(
+          std::in_place,
+          make_box<obj::symbol>("clojure.core/apply"),
+          make_box<obj::symbol>("clojure.core/hash-map"),
+          make_box<obj::persistent_list>(
+            std::in_place,
+            make_box<obj::symbol>("clojure.core/seq"),
+            conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat"))));
+      }
+      if(bs->is_set)
+      {
+        return err(error::internal_parse_failure("nyi: set"));
+      }
+      if(form->type == object_type::persistent_list)
+      {
+        if(!seq)
+        {
           return make_box<obj::persistent_list>(std::in_place,
-                                                make_box<obj::symbol>("quote"),
-                                                form);
-        },
-        form);
+                                                make_box<obj::symbol>("clojure.core/list"));
+        }
+        else
+        {
+          auto expanded(syntax_quote_expand_seq(seq));
+          if(expanded.is_err())
+          {
+            return expanded;
+          }
+
+          return make_box<obj::persistent_list>(
+            std::in_place,
+            make_box<obj::symbol>("clojure.core/seq"),
+            conj(expanded.expect_ok(), make_box<obj::symbol>("clojure.core/concat")));
+        }
+      }
+      else
+      {
+        return err(error::internal_parse_failure(
+          fmt::format("Unsupported collection type: {}", object_type_str(bs->base(seq).type))));
+      }
     }
   }
 

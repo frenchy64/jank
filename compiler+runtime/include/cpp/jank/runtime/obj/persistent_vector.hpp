@@ -42,6 +42,7 @@ namespace jank::runtime::obj
     static persistent_vector_ptr create(object_ptr s);
 
     static persistent_vector_ptr empty();
+    object_ptr create_empty() const;
 
     /* behavior::object_like */
     native_bool equal(object const &) const;

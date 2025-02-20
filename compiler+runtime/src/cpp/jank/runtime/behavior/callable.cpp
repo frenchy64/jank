@@ -1,9 +1,12 @@
 #include <fmt/core.h>
 
 #include <jank/native_persistent_string/fmt.hpp>
+#include <jank/runtime/obj/native_array_sequence.hpp>
+#include <jank/runtime/obj/native_vector_sequence.hpp>
+#include <jank/runtime/obj/native_function_wrapper.hpp>
 #include <jank/runtime/behavior/callable.hpp>
 #include <jank/runtime/behavior/seqable.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/util/make_array.hpp>
 
@@ -18,29 +21,24 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(behaviors(source));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-
-          switch(arity_flags)
-          {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(obj::nil::nil_const());
-            default:
-              return typed_source->call();
-          }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 0 args to {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+    if(bs->is_function_like || bs->is_callable)
+    {
+      auto const arity_flags(bs->get_arity_flags(source));
+      switch(arity_flags)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs->call1(source, obj::nil::nil_const());
+        default:
+          return bs->call0(source);
+      }
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 0 args to {}",
+                                            bs->to_string(source)) };
+    }
   }
 
   object_ptr dynamic_call(object_ptr source, object_ptr const a1)
@@ -50,44 +48,35 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(behaviors(source));
+    if(bs->is_function_like || bs->is_callable)
+    {
+      auto const arity_flags(bs->get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-
-          switch(mask)
+      switch(mask)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs->call1(source, make_box<obj::native_array_sequence>(a1));
+        case callable::mask_variadic_arity(1):
+          if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(make_box<obj::native_array_sequence>(a1));
-            case callable::mask_variadic_arity(1):
-              if(!callable::is_variadic_ambiguous(arity_flags))
-              {
-                return typed_source->call(a1, obj::nil::nil_const());
-              }
-            default:
-              return typed_source->call(a1);
+            return bs->call2(source, a1, obj::nil::nil_const());
           }
-        }
-        else if constexpr(std::same_as<T, obj::persistent_hash_set>
-                          || std::same_as<T, obj::persistent_hash_map>
-                          || std::same_as<T, obj::persistent_array_map>
-                          || std::same_as<T, obj::transient_vector>
-                          || std::same_as<T, obj::transient_hash_set>
-                          || std::same_as<T, obj::keyword>)
-        {
-          return typed_source->call(a1);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 1 arg to: {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        default:
+          return bs->call1(source, a1);
+      }
+    }
+    auto const call1(bs->call1);
+    if(call1 != nullptr)
+    {
+      return call1(source, a1);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 1 arg to: {}",
+                                            bs->to_string(source)) };
+    }
   }
 
   object_ptr dynamic_call(object_ptr source, object_ptr const a1, object_ptr const a2)
@@ -97,44 +86,37 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(behaviors(source));
+    if(bs->is_function_like || bs->is_callable)
+    {
+      auto const arity_flags(bs->get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-
-          switch(mask)
+      switch(mask)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs->call1(source, make_box<obj::native_array_sequence>(a1, a2));
+        case callable::mask_variadic_arity(1):
+          return bs->call2(source, a1, make_box<obj::native_array_sequence>(a2));
+        case callable::mask_variadic_arity(2):
+          if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(make_box<obj::native_array_sequence>(a1, a2));
-            case callable::mask_variadic_arity(1):
-              return typed_source->call(a1, make_box<obj::native_array_sequence>(a2));
-            case callable::mask_variadic_arity(2):
-              if(!callable::is_variadic_ambiguous(arity_flags))
-              {
-                return typed_source->call(a1, a2, obj::nil::nil_const());
-              }
-            default:
-              return typed_source->call(a1, a2);
+            return bs->call3(source, a1, a2, obj::nil::nil_const());
           }
-        }
-        else if constexpr(std::same_as<T, obj::persistent_hash_map>
-                          || std::same_as<T, obj::persistent_array_map>
-                          || std::same_as<T, obj::transient_hash_set>
-                          || std::same_as<T, obj::keyword>)
-        {
-          return typed_source->call(a1, a2);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 2 args to: {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        default:
+          return bs->call2(source, a1, a2);
+      }
+    }
+    auto const call2(bs->call2);
+    if(call2 != nullptr)
+    {
+      return call2(source, a1, a2);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 2 args to: {}",
+                                            bs->to_string(source)) };
+    }
   }
 
   object_ptr
@@ -145,39 +127,34 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(behaviors(source));
+    if(bs->is_function_like || bs->is_callable)
+    {
+      auto const arity_flags(bs->get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-
-          switch(mask)
+      switch(mask)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs->call1(source, make_box<obj::native_array_sequence>(a1, a2, a3));
+        case callable::mask_variadic_arity(1):
+          return bs->call2(source, a1, make_box<obj::native_array_sequence>(a2, a3));
+        case callable::mask_variadic_arity(2):
+          return bs->call3(source, a1, a2, make_box<obj::native_array_sequence>(a3));
+        case callable::mask_variadic_arity(3):
+          if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(make_box<obj::native_array_sequence>(a1, a2, a3));
-            case callable::mask_variadic_arity(1):
-              return typed_source->call(a1, make_box<obj::native_array_sequence>(a2, a3));
-            case callable::mask_variadic_arity(2):
-              return typed_source->call(a1, a2, make_box<obj::native_array_sequence>(a3));
-            case callable::mask_variadic_arity(3):
-              if(!callable::is_variadic_ambiguous(arity_flags))
-              {
-                return typed_source->call(a1, a2, a3, obj::nil::nil_const());
-              }
-            default:
-              return typed_source->call(a1, a2, a3);
+            return bs->call4(source, a1, a2, a3, obj::nil::nil_const());
           }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 3 args to: {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        default:
+          return bs->call3(source, a1, a2, a3);
+      }
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 3 args to: {}",
+                                            bs->to_string(source)) };
+    }
   }
 
   object_ptr dynamic_call(object_ptr source,
@@ -191,41 +168,36 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(behaviors(source));
+    if(bs->is_function_like || bs->is_callable)
+    {
+      auto const arity_flags(bs->get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-
-          switch(mask)
+      switch(mask)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs->call1(source, make_box<obj::native_array_sequence>(a1, a2, a3, a4));
+        case callable::mask_variadic_arity(1):
+          return bs->call2(source, a1, make_box<obj::native_array_sequence>(a2, a3, a4));
+        case callable::mask_variadic_arity(2):
+          return bs->call3(source, a1, a2, make_box<obj::native_array_sequence>(a3, a4));
+        case callable::mask_variadic_arity(3):
+          return bs->call4(source, a1, a2, a3, make_box<obj::native_array_sequence>(a4));
+        case callable::mask_variadic_arity(4):
+          if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(make_box<obj::native_array_sequence>(a1, a2, a3, a4));
-            case callable::mask_variadic_arity(1):
-              return typed_source->call(a1, make_box<obj::native_array_sequence>(a2, a3, a4));
-            case callable::mask_variadic_arity(2):
-              return typed_source->call(a1, a2, make_box<obj::native_array_sequence>(a3, a4));
-            case callable::mask_variadic_arity(3):
-              return typed_source->call(a1, a2, a3, make_box<obj::native_array_sequence>(a4));
-            case callable::mask_variadic_arity(4):
-              if(!callable::is_variadic_ambiguous(arity_flags))
-              {
-                return typed_source->call(a1, a2, a3, a4, obj::nil::nil_const());
-              }
-            default:
-              return typed_source->call(a1, a2, a3, a4);
+            return bs->call5(source, a1, a2, a3, a4, obj::nil::nil_const());
           }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 4 args to: {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        default:
+          return bs->call4(source, a1, a2, a3, a4);
+      }
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 4 args to: {}",
+                                            bs->to_string(source)) };
+    }
   }
 
   object_ptr dynamic_call(object_ptr source,
@@ -240,43 +212,38 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(behaviors(source));
+    if(bs->is_function_like || bs->is_callable)
+    {
+      auto const arity_flags(bs->get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-
-          switch(mask)
+      switch(mask)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs->call1(source, make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5));
+        case callable::mask_variadic_arity(1):
+          return bs->call2(source, a1, make_box<obj::native_array_sequence>(a2, a3, a4, a5));
+        case callable::mask_variadic_arity(2):
+          return bs->call3(source, a1, a2, make_box<obj::native_array_sequence>(a3, a4, a5));
+        case callable::mask_variadic_arity(3):
+          return bs->call4(source, a1, a2, a3, make_box<obj::native_array_sequence>(a4, a5));
+        case callable::mask_variadic_arity(4):
+          return bs->call5(source, a1, a2, a3, a4, make_box<obj::native_array_sequence>(a5));
+        case callable::mask_variadic_arity(5):
+          if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5));
-            case callable::mask_variadic_arity(1):
-              return typed_source->call(a1, make_box<obj::native_array_sequence>(a2, a3, a4, a5));
-            case callable::mask_variadic_arity(2):
-              return typed_source->call(a1, a2, make_box<obj::native_array_sequence>(a3, a4, a5));
-            case callable::mask_variadic_arity(3):
-              return typed_source->call(a1, a2, a3, make_box<obj::native_array_sequence>(a4, a5));
-            case callable::mask_variadic_arity(4):
-              return typed_source->call(a1, a2, a3, a4, make_box<obj::native_array_sequence>(a5));
-            case callable::mask_variadic_arity(5):
-              if(!callable::is_variadic_ambiguous(arity_flags))
-              {
-                return typed_source->call(a1, a2, a3, a4, a5, obj::nil::nil_const());
-              }
-            default:
-              return typed_source->call(a1, a2, a3, a4, a5);
+            return bs->call6(source, a1, a2, a3, a4, a5, obj::nil::nil_const());
           }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 5 args to: {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        default:
+          return bs->call5(source, a1, a2, a3, a4, a5);
+      }
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 5 args to: {}",
+                                            bs->to_string(source)) };
+    }
   }
 
   object_ptr dynamic_call(object_ptr source,
@@ -292,57 +259,40 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(behaviors(source));
+    if(bs->is_function_like || bs->is_callable)
+    {
+      auto const arity_flags(bs->get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-
-          switch(mask)
+      switch(mask)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs->call1(source, make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6));
+        case callable::mask_variadic_arity(1):
+          return bs->call2(source, a1, make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6));
+        case callable::mask_variadic_arity(2):
+          return bs->call3(source, a1, a2, make_box<obj::native_array_sequence>(a3, a4, a5, a6));
+        case callable::mask_variadic_arity(3):
+          return bs->call4(source, a1, a2, a3, make_box<obj::native_array_sequence>(a4, a5, a6));
+        case callable::mask_variadic_arity(4):
+          return bs->call5(source, a1, a2, a3, a4, make_box<obj::native_array_sequence>(a5, a6));
+        case callable::mask_variadic_arity(5):
+          return bs->call6(source, a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6));
+        case callable::mask_variadic_arity(6):
+          if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(
-                make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6));
-            case callable::mask_variadic_arity(1):
-              return typed_source->call(a1,
-                                        make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6));
-            case callable::mask_variadic_arity(2):
-              return typed_source->call(a1,
-                                        a2,
-                                        make_box<obj::native_array_sequence>(a3, a4, a5, a6));
-            case callable::mask_variadic_arity(3):
-              return typed_source->call(a1,
-                                        a2,
-                                        a3,
-                                        make_box<obj::native_array_sequence>(a4, a5, a6));
-            case callable::mask_variadic_arity(4):
-              return typed_source->call(a1,
-                                        a2,
-                                        a3,
-                                        a4,
-                                        make_box<obj::native_array_sequence>(a5, a6));
-            case callable::mask_variadic_arity(5):
-              return typed_source
-                ->call(a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6));
-            case callable::mask_variadic_arity(6):
-              if(!callable::is_variadic_ambiguous(arity_flags))
-              {
-                return typed_source->call(a1, a2, a3, a4, a5, a6, obj::nil::nil_const());
-              }
-            default:
-              return typed_source->call(a1, a2, a3, a4, a5, a6);
+            return bs->call7(source, a1, a2, a3, a4, a5, a6, obj::nil::nil_const());
           }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 6 args to: {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        default:
+          return bs->call6(source, a1, a2, a3, a4, a5, a6);
+      }
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 6 args to: {}",
+                                            bs->to_string(source)) };
+    }
   }
 
   object_ptr dynamic_call(object_ptr source,
@@ -359,61 +309,55 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(behaviors(source));
+    if(bs->is_function_like || bs->is_callable)
+    {
+      auto const arity_flags(bs->get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-
-          switch(mask)
+      switch(mask)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs->call1(source,
+                           make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7));
+        case callable::mask_variadic_arity(1):
+          return bs->call2(source,
+                           a1,
+                           make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7));
+        case callable::mask_variadic_arity(2):
+          return bs->call3(source,
+                           a1,
+                           a2,
+                           make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7));
+        case callable::mask_variadic_arity(3):
+          return bs->call4(source,
+                           a1,
+                           a2,
+                           a3,
+                           make_box<obj::native_array_sequence>(a4, a5, a6, a7));
+        case callable::mask_variadic_arity(4):
+          return bs
+            ->call5(source, a1, a2, a3, a4, make_box<obj::native_array_sequence>(a5, a6, a7));
+        case callable::mask_variadic_arity(5):
+          return bs
+            ->call6(source, a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6, a7));
+        case callable::mask_variadic_arity(6):
+          return bs
+            ->call7(source, a1, a2, a3, a4, a5, a6, make_box<obj::native_array_sequence>(a7));
+        case callable::mask_variadic_arity(7):
+          if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(
-                make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7));
-            case callable::mask_variadic_arity(1):
-              return typed_source->call(
-                a1,
-                make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7));
-            case callable::mask_variadic_arity(2):
-              return typed_source->call(a1,
-                                        a2,
-                                        make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7));
-            case callable::mask_variadic_arity(3):
-              return typed_source->call(a1,
-                                        a2,
-                                        a3,
-                                        make_box<obj::native_array_sequence>(a4, a5, a6, a7));
-            case callable::mask_variadic_arity(4):
-              return typed_source->call(a1,
-                                        a2,
-                                        a3,
-                                        a4,
-                                        make_box<obj::native_array_sequence>(a5, a6, a7));
-            case callable::mask_variadic_arity(5):
-              return typed_source
-                ->call(a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6, a7));
-            case callable::mask_variadic_arity(6):
-              return typed_source
-                ->call(a1, a2, a3, a4, a5, a6, make_box<obj::native_array_sequence>(a7));
-            case callable::mask_variadic_arity(7):
-              if(!callable::is_variadic_ambiguous(arity_flags))
-              {
-                return typed_source->call(a1, a2, a3, a4, a5, a6, a7, obj::nil::nil_const());
-              }
-            default:
-              return typed_source->call(a1, a2, a3, a4, a5, a6, a7);
+            return bs->call8(source, a1, a2, a3, a4, a5, a6, a7, obj::nil::nil_const());
           }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 7 args to: {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        default:
+          return bs->call7(source, a1, a2, a3, a4, a5, a6, a7);
+      }
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 7 args to: {}",
+                                            bs->to_string(source)) };
+    }
   }
 
   object_ptr dynamic_call(object_ptr source,
@@ -431,65 +375,58 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(behaviors(source));
+    if(bs->is_function_like || bs->is_callable)
+    {
+      auto const arity_flags(bs->get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-
-          switch(mask)
+      switch(mask)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs->call1(source,
+                           make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7, a8));
+        case callable::mask_variadic_arity(1):
+          return bs->call2(source,
+                           a1,
+                           make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7, a8));
+        case callable::mask_variadic_arity(2):
+          return bs->call3(source,
+                           a1,
+                           a2,
+                           make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7, a8));
+        case callable::mask_variadic_arity(3):
+          return bs->call4(source,
+                           a1,
+                           a2,
+                           a3,
+                           make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8));
+        case callable::mask_variadic_arity(4):
+          return bs
+            ->call5(source, a1, a2, a3, a4, make_box<obj::native_array_sequence>(a5, a6, a7, a8));
+        case callable::mask_variadic_arity(5):
+          return bs
+            ->call6(source, a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6, a7, a8));
+        case callable::mask_variadic_arity(6):
+          return bs
+            ->call7(source, a1, a2, a3, a4, a5, a6, make_box<obj::native_array_sequence>(a7, a8));
+        case callable::mask_variadic_arity(7):
+          return bs
+            ->call8(source, a1, a2, a3, a4, a5, a6, a7, make_box<obj::native_array_sequence>(a8));
+        case callable::mask_variadic_arity(8):
+          if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(
-                make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7, a8));
-            case callable::mask_variadic_arity(1):
-              return typed_source->call(
-                a1,
-                make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7, a8));
-            case callable::mask_variadic_arity(2):
-              return typed_source->call(
-                a1,
-                a2,
-                make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7, a8));
-            case callable::mask_variadic_arity(3):
-              return typed_source->call(a1,
-                                        a2,
-                                        a3,
-                                        make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8));
-            case callable::mask_variadic_arity(4):
-              return typed_source->call(a1,
-                                        a2,
-                                        a3,
-                                        a4,
-                                        make_box<obj::native_array_sequence>(a5, a6, a7, a8));
-            case callable::mask_variadic_arity(5):
-              return typed_source
-                ->call(a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6, a7, a8));
-            case callable::mask_variadic_arity(6):
-              return typed_source
-                ->call(a1, a2, a3, a4, a5, a6, make_box<obj::native_array_sequence>(a7, a8));
-            case callable::mask_variadic_arity(7):
-              return typed_source
-                ->call(a1, a2, a3, a4, a5, a6, a7, make_box<obj::native_array_sequence>(a8));
-            case callable::mask_variadic_arity(8):
-              if(!callable::is_variadic_ambiguous(arity_flags))
-              {
-                return typed_source->call(a1, a2, a3, a4, a5, a6, a7, a8, obj::nil::nil_const());
-              }
-            default:
-              return typed_source->call(a1, a2, a3, a4, a5, a6, a7, a8);
+            return bs->call9(source, a1, a2, a3, a4, a5, a6, a7, a8, obj::nil::nil_const());
           }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 8 args to: {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        default:
+          return bs->call8(source, a1, a2, a3, a4, a5, a6, a7, a8);
+      }
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 8 args to: {}",
+                                            bs->to_string(source)) };
+    }
   }
 
   object_ptr dynamic_call(object_ptr source,
@@ -508,67 +445,92 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(behaviors(source));
+    if(bs->is_function_like || bs->is_callable)
+    {
+      auto const arity_flags(bs->get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-
-          switch(mask)
+      switch(mask)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs->call1(
+            source,
+            make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7, a8, a9));
+        case callable::mask_variadic_arity(1):
+          return bs->call2(source,
+                           a1,
+                           make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7, a8, a9));
+        case callable::mask_variadic_arity(2):
+          return bs->call3(source,
+                           a1,
+                           a2,
+                           make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7, a8, a9));
+        case callable::mask_variadic_arity(3):
+          return bs->call4(source,
+                           a1,
+                           a2,
+                           a3,
+                           make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8, a9));
+        case callable::mask_variadic_arity(4):
+          return bs->call5(source,
+                           a1,
+                           a2,
+                           a3,
+                           a4,
+                           make_box<obj::native_array_sequence>(a5, a6, a7, a8, a9));
+        case callable::mask_variadic_arity(5):
+          return bs->call6(source,
+                           a1,
+                           a2,
+                           a3,
+                           a4,
+                           a5,
+                           make_box<obj::native_array_sequence>(a6, a7, a8, a9));
+        case callable::mask_variadic_arity(6):
+          return bs->call7(source,
+                           a1,
+                           a2,
+                           a3,
+                           a4,
+                           a5,
+                           a6,
+                           make_box<obj::native_array_sequence>(a7, a8, a9));
+        case callable::mask_variadic_arity(7):
+          return bs->call8(source,
+                           a1,
+                           a2,
+                           a3,
+                           a4,
+                           a5,
+                           a6,
+                           a7,
+                           make_box<obj::native_array_sequence>(a8, a9));
+        case callable::mask_variadic_arity(8):
+          return bs->call9(source,
+                           a1,
+                           a2,
+                           a3,
+                           a4,
+                           a5,
+                           a6,
+                           a7,
+                           a8,
+                           make_box<obj::native_array_sequence>(a9));
+        case callable::mask_variadic_arity(9):
+          if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(
-                make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7, a8, a9));
-            case callable::mask_variadic_arity(1):
-              return typed_source->call(
-                a1,
-                make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7, a8, a9));
-            case callable::mask_variadic_arity(2):
-              return typed_source->call(
-                a1,
-                a2,
-                make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7, a8, a9));
-            case callable::mask_variadic_arity(3):
-              return typed_source
-                ->call(a1, a2, a3, make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8, a9));
-            case callable::mask_variadic_arity(4):
-              return typed_source->call(a1,
-                                        a2,
-                                        a3,
-                                        a4,
-                                        make_box<obj::native_array_sequence>(a5, a6, a7, a8, a9));
-            case callable::mask_variadic_arity(5):
-              return typed_source
-                ->call(a1, a2, a3, a4, a5, make_box<obj::native_array_sequence>(a6, a7, a8, a9));
-            case callable::mask_variadic_arity(6):
-              return typed_source
-                ->call(a1, a2, a3, a4, a5, a6, make_box<obj::native_array_sequence>(a7, a8, a9));
-            case callable::mask_variadic_arity(7):
-              return typed_source
-                ->call(a1, a2, a3, a4, a5, a6, a7, make_box<obj::native_array_sequence>(a8, a9));
-            case callable::mask_variadic_arity(8):
-              return typed_source
-                ->call(a1, a2, a3, a4, a5, a6, a7, a8, make_box<obj::native_array_sequence>(a9));
-            case callable::mask_variadic_arity(9):
-              if(!callable::is_variadic_ambiguous(arity_flags))
-              {
-                return typed_source
-                  ->call(a1, a2, a3, a4, a5, a6, a7, a8, a9, obj::nil::nil_const());
-              }
-            default:
-              return typed_source->call(a1, a2, a3, a4, a5, a6, a7, a8, a9);
+            return bs->call10(source, a1, a2, a3, a4, a5, a6, a7, a8, a9, obj::nil::nil_const());
           }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 9 args to: {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        default:
+          return bs->call9(source, a1, a2, a3, a4, a5, a6, a7, a8, a9);
+      }
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 9 args to: {}",
+                                            bs->to_string(source)) };
+    }
   }
 
   object_ptr dynamic_call(object_ptr source,
@@ -588,112 +550,115 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
+    auto const bs(behaviors(source));
+    if(bs->is_function_like || bs->is_callable)
+    {
+      auto const arity_flags(bs->get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
 
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-
-          switch(mask)
+      switch(mask)
+      {
+        case callable::mask_variadic_arity(0):
+          return bs->call1(
+            source,
+            make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10));
+        case callable::mask_variadic_arity(1):
+          return bs->call2(
+            source,
+            a1,
+            make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7, a8, a9, a10));
+        case callable::mask_variadic_arity(2):
+          return bs->call3(source,
+                           a1,
+                           a2,
+                           make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7, a8, a9, a10));
+        case callable::mask_variadic_arity(3):
+          return bs->call4(source,
+                           a1,
+                           a2,
+                           a3,
+                           make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8, a9, a10));
+        case callable::mask_variadic_arity(4):
+          return bs->call5(source,
+                           a1,
+                           a2,
+                           a3,
+                           a4,
+                           make_box<obj::native_array_sequence>(a5, a6, a7, a8, a9, a10));
+        case callable::mask_variadic_arity(5):
+          return bs->call6(source,
+                           a1,
+                           a2,
+                           a3,
+                           a4,
+                           a5,
+                           make_box<obj::native_array_sequence>(a6, a7, a8, a9, a10));
+        case callable::mask_variadic_arity(6):
+          return bs->call7(source,
+                           a1,
+                           a2,
+                           a3,
+                           a4,
+                           a5,
+                           a6,
+                           make_box<obj::native_array_sequence>(a7, a8, a9, a10));
+        case callable::mask_variadic_arity(7):
+          return bs->call8(source,
+                           a1,
+                           a2,
+                           a3,
+                           a4,
+                           a5,
+                           a6,
+                           a7,
+                           make_box<obj::native_array_sequence>(a8, a9, a10));
+        case callable::mask_variadic_arity(8):
+          return bs->call9(source,
+                           a1,
+                           a2,
+                           a3,
+                           a4,
+                           a5,
+                           a6,
+                           a7,
+                           a8,
+                           make_box<obj::native_array_sequence>(a9, a10));
+        case callable::mask_variadic_arity(9):
+          return bs->call10(source,
+                            a1,
+                            a2,
+                            a3,
+                            a4,
+                            a5,
+                            a6,
+                            a7,
+                            a8,
+                            a9,
+                            make_box<obj::native_array_sequence>(a10));
+        case callable::mask_variadic_arity(10):
+          if(!callable::is_variadic_ambiguous(arity_flags))
           {
-            case callable::mask_variadic_arity(0):
-              return typed_source->call(
-                make_box<obj::native_array_sequence>(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10));
-            case callable::mask_variadic_arity(1):
-              return typed_source->call(
-                a1,
-                make_box<obj::native_array_sequence>(a2, a3, a4, a5, a6, a7, a8, a9, a10));
-            case callable::mask_variadic_arity(2):
-              return typed_source->call(
-                a1,
-                a2,
-                make_box<obj::native_array_sequence>(a3, a4, a5, a6, a7, a8, a9, a10));
-            case callable::mask_variadic_arity(3):
-              return typed_source->call(
-                a1,
-                a2,
-                a3,
-                make_box<obj::native_array_sequence>(a4, a5, a6, a7, a8, a9, a10));
-            case callable::mask_variadic_arity(4):
-              return typed_source->call(
-                a1,
-                a2,
-                a3,
-                a4,
-                make_box<obj::native_array_sequence>(a5, a6, a7, a8, a9, a10));
-            case callable::mask_variadic_arity(5):
-              return typed_source->call(a1,
-                                        a2,
-                                        a3,
-                                        a4,
-                                        a5,
-                                        make_box<obj::native_array_sequence>(a6, a7, a8, a9, a10));
-            case callable::mask_variadic_arity(6):
-              return typed_source->call(a1,
-                                        a2,
-                                        a3,
-                                        a4,
-                                        a5,
-                                        a6,
-                                        make_box<obj::native_array_sequence>(a7, a8, a9, a10));
-            case callable::mask_variadic_arity(7):
-              return typed_source->call(a1,
-                                        a2,
-                                        a3,
-                                        a4,
-                                        a5,
-                                        a6,
-                                        a7,
-                                        make_box<obj::native_array_sequence>(a8, a9, a10));
-            case callable::mask_variadic_arity(8):
-              return typed_source->call(a1,
-                                        a2,
-                                        a3,
-                                        a4,
-                                        a5,
-                                        a6,
-                                        a7,
-                                        a8,
-                                        make_box<obj::native_array_sequence>(a9, a10));
-            case callable::mask_variadic_arity(9):
-              return typed_source->call(a1,
-                                        a2,
-                                        a3,
-                                        a4,
-                                        a5,
-                                        a6,
-                                        a7,
-                                        a8,
-                                        a9,
-                                        make_box<obj::native_array_sequence>(a10));
-            case callable::mask_variadic_arity(10):
-              if(!callable::is_variadic_ambiguous(arity_flags))
-              {
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          a5,
-                                          a6,
-                                          a7,
-                                          a8,
-                                          a9,
-                                          make_box<obj::native_array_sequence>(a10));
-              }
-            default:
-              return typed_source->call(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
+            return bs->call10(source,
+                              a1,
+                              a2,
+                              a3,
+                              a4,
+                              a5,
+                              a6,
+                              a7,
+                              a8,
+                              a9,
+                              make_box<obj::native_array_sequence>(a10));
           }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with 10 args to: {}",
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        default:
+          return bs->call10(source, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
+      }
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with 10 args to: {}",
+                                            bs->to_string(source)) };
+    }
   }
 
   object_ptr dynamic_call(object_ptr source,
@@ -715,254 +680,250 @@ namespace jank::runtime
       source = runtime::deref(source);
     }
 
-    return visit_object(
-      [=](auto const typed_source) -> object_ptr {
-        using T = typename decltype(typed_source)::value_type;
-
-        if constexpr(function_like<T> || std::is_base_of_v<callable, T>)
-        {
-          auto const arity_flags(typed_source->get_arity_flags());
-          auto const mask(callable::extract_variadic_arity_mask(arity_flags));
-          switch(mask)
+    auto const bs(behaviors(source));
+    if(bs->is_function_like || bs->is_callable)
+    {
+      auto const arity_flags(bs->get_arity_flags(source));
+      auto const mask(callable::extract_variadic_arity_mask(arity_flags));
+      switch(mask)
+      {
+        /* TODO: Optimize this with a faster seq? */
+        case callable::mask_variadic_arity(0):
           {
-            /* TODO: Optimize this with a faster seq? */
-            case callable::mask_variadic_arity(0):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(10 + rest->count());
-                packed.insert(packed.end(), { a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(1):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(9 + rest->count());
-                packed.insert(packed.end(), { a2, a3, a4, a5, a6, a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(2):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(8 + rest->count());
-                packed.insert(packed.end(), { a3, a4, a5, a6, a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(3):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(7 + rest->count());
-                packed.insert(packed.end(), { a4, a5, a6, a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(4):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(6 + rest->count());
-                packed.insert(packed.end(), { a5, a6, a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(5):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(5 + rest->count());
-                packed.insert(packed.end(), { a6, a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          a5,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(6):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(4 + rest->count());
-                packed.insert(packed.end(), { a7, a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          a5,
-                                          a6,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(7):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(3 + rest->count());
-                packed.insert(packed.end(), { a8, a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          a5,
-                                          a6,
-                                          a7,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(8):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(2 + rest->count());
-                packed.insert(packed.end(), { a9, a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          a5,
-                                          a6,
-                                          a7,
-                                          a8,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            case callable::mask_variadic_arity(9):
-              {
-                native_vector<object_ptr> packed;
-                packed.reserve(1 + rest->count());
-                packed.insert(packed.end(), { a10 });
-                std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
-                return typed_source->call(a1,
-                                          a2,
-                                          a3,
-                                          a4,
-                                          a5,
-                                          a6,
-                                          a7,
-                                          a8,
-                                          a9,
-                                          make_box<obj::native_vector_sequence>(std::move(packed)));
-              }
-            default:
-              throw std::runtime_error{ fmt::format("unsupported arity: {}", 10 + rest->count()) };
+            native_vector<object_ptr> packed;
+            packed.reserve(10 + rest->count());
+            packed.insert(packed.end(), { a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs->call1(source, make_box<obj::native_vector_sequence>(std::move(packed)));
           }
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid call with {} args to: {}",
-                                                10 + sequence_length(rest),
-                                                typed_source->to_string()) };
-        }
-      },
-      source);
+        case callable::mask_variadic_arity(1):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(9 + rest->count());
+            packed.insert(packed.end(), { a2, a3, a4, a5, a6, a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs->call2(source, a1, make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(2):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(8 + rest->count());
+            packed.insert(packed.end(), { a3, a4, a5, a6, a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs->call3(source,
+                             a1,
+                             a2,
+                             make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(3):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(7 + rest->count());
+            packed.insert(packed.end(), { a4, a5, a6, a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs->call4(source,
+                             a1,
+                             a2,
+                             a3,
+                             make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(4):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(6 + rest->count());
+            packed.insert(packed.end(), { a5, a6, a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs->call5(source,
+                             a1,
+                             a2,
+                             a3,
+                             a4,
+                             make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(5):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(5 + rest->count());
+            packed.insert(packed.end(), { a6, a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs->call6(source,
+                             a1,
+                             a2,
+                             a3,
+                             a4,
+                             a5,
+                             make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(6):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(4 + rest->count());
+            packed.insert(packed.end(), { a7, a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs->call7(source,
+                             a1,
+                             a2,
+                             a3,
+                             a4,
+                             a5,
+                             a6,
+                             make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(7):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(3 + rest->count());
+            packed.insert(packed.end(), { a8, a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs->call8(source,
+                             a1,
+                             a2,
+                             a3,
+                             a4,
+                             a5,
+                             a6,
+                             a7,
+                             make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(8):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(2 + rest->count());
+            packed.insert(packed.end(), { a9, a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs->call9(source,
+                             a1,
+                             a2,
+                             a3,
+                             a4,
+                             a5,
+                             a6,
+                             a7,
+                             a8,
+                             make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        case callable::mask_variadic_arity(9):
+          {
+            native_vector<object_ptr> packed;
+            packed.reserve(1 + rest->count());
+            packed.insert(packed.end(), { a10 });
+            std::copy(rest->data.begin(), rest->data.end(), std::back_inserter(packed));
+            return bs->call10(source,
+                              a1,
+                              a2,
+                              a3,
+                              a4,
+                              a5,
+                              a6,
+                              a7,
+                              a8,
+                              a9,
+                              make_box<obj::native_vector_sequence>(std::move(packed)));
+          }
+        default:
+          throw std::runtime_error{ fmt::format("unsupported arity: {}", 10 + rest->count()) };
+      }
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("invalid call with {} args to: {}",
+                                            10 + sequence_length(rest),
+                                            bs->to_string(source)) };
+    }
   }
 
+  //TODO use specialized fresh_seq/first/next_in_place
   object_ptr apply_to(object_ptr const source, object_ptr const args)
   {
-    return visit_seqable(
-      [=](auto const typed_args) -> object_ptr {
-        auto const s(typed_args->fresh_seq());
-        auto const length(sequence_length(s, max_params + 1));
-        switch(length)
-        {
-          case 0:
-            return dynamic_call(source);
-          case 1:
-            return dynamic_call(source, s->first());
-          case 2:
-            return dynamic_call(source, s->first(), s->next_in_place()->first());
-          case 3:
-            return dynamic_call(source,
-                                s->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first());
-          case 4:
-            return dynamic_call(source,
-                                s->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first());
-          case 5:
-            return dynamic_call(source,
-                                s->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first());
-          case 6:
-            return dynamic_call(source,
-                                s->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first());
-          case 7:
-            return dynamic_call(source,
-                                s->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first());
-          case 8:
-            return dynamic_call(source,
-                                s->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first());
-          case 9:
-            return dynamic_call(source,
-                                s->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first());
-          case 10:
-            return dynamic_call(source,
-                                s->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first());
-          default:
-            return dynamic_call(source,
-                                s->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                s->next_in_place()->first(),
-                                obj::persistent_list::create(next_in_place(s)));
-        }
-      },
-      args);
+    auto const s(fresh_seq(args));
+    auto const length(sequence_length(s, max_params + 1));
+    switch(length)
+    {
+      case 0:
+        return dynamic_call(source);
+      case 1:
+        return dynamic_call(source, first(s));
+      case 2:
+        return dynamic_call(source, first(s), first(next_in_place(s)));
+      case 3:
+        return dynamic_call(source, first(s), first(next_in_place(s)), first(next_in_place(s)));
+      case 4:
+        return dynamic_call(source,
+                            first(s),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)));
+      case 5:
+        return dynamic_call(source,
+                            first(s),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)));
+      case 6:
+        return dynamic_call(source,
+                            first(s),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)));
+      case 7:
+        return dynamic_call(source,
+                            first(s),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)));
+      case 8:
+        return dynamic_call(source,
+                            first(s),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)));
+      case 9:
+        return dynamic_call(source,
+                            first(s),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)));
+      case 10:
+        return dynamic_call(source,
+                            first(s),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)));
+      default:
+        return dynamic_call(source,
+                            first(s),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            first(next_in_place(s)),
+                            obj::persistent_list::create(next_in_place(s)));
+    }
   }
 
   namespace behavior

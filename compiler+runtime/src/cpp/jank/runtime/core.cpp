@@ -2,7 +2,21 @@
 
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/core.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/rtti.hpp>
+#include <jank/runtime/obj/atom.hpp>
+#include <jank/runtime/obj/character.hpp>
+#include <jank/runtime/obj/cons.hpp>
+#include <jank/runtime/obj/delay.hpp>
+#include <jank/runtime/obj/keyword.hpp>
+#include <jank/runtime/obj/nil.hpp>
+#include <jank/runtime/obj/number.hpp>
+#include <jank/runtime/obj/persistent_hash_map.hpp>
+#include <jank/runtime/obj/persistent_string.hpp>
+#include <jank/runtime/obj/symbol.hpp>
+#include <jank/runtime/obj/tagged_literal.hpp>
+#include <jank/runtime/obj/volatile.hpp>
+#include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/behavior/callable.hpp>
 #include <jank/runtime/behavior/comparable.hpp>
 #include <jank/runtime/behavior/nameable.hpp>
 #include <jank/runtime/behavior/derefable.hpp>
@@ -24,20 +38,12 @@ namespace jank::runtime
         return 1;
       }
 
-      return visit_object(
-        [](auto const typed_l, auto const r) -> native_integer {
-          using L = typename decltype(typed_l)::value_type;
-          if constexpr(behavior::comparable<L>)
-          {
-            return typed_l->compare(*r);
-          }
-          else
-          {
-            throw std::runtime_error{ fmt::format("not comparable: {}", typed_l->to_string()) };
-          }
-        },
-        l,
-        r);
+      auto const bs(behaviors(l));
+      if(!bs->is_comparable)
+      {
+        throw std::runtime_error{ fmt::format("not comparable: {}", bs->to_string(l)) };
+      }
+      return bs->compare(l, r);
     }
 
     return -1;
@@ -73,6 +79,11 @@ namespace jank::runtime
     return o != obj::nil::nil_const();
   }
 
+  native_bool is_var(object_ptr const o)
+  {
+    return o->type == object_type::var;
+  }
+
   native_bool is_string(object_ptr const o)
   {
     return o->type == object_type::persistent_string;
@@ -98,132 +109,70 @@ namespace jank::runtime
     return o->type == object_type::symbol && !expect_object<obj::symbol>(o)->ns.empty();
   }
 
+  object_ptr print_helper(object_ptr const args,
+                          std::function<void(object_ptr, util::string_builder &)> into_builder)
+  {
+    if(is_nil(args))
+    {
+      return obj::nil::nil_const();
+    }
+
+    auto const bs(behaviors(args));
+    if(!bs->is_sequenceable)
+    {
+      throw std::runtime_error{ fmt::format("expected a sequence: {}", bs->to_string(args)) };
+    }
+    util::string_builder buff;
+    into_builder(bs->first(args), buff);
+    // TODO next_in_place / first perf
+    for(auto it(bs->next_in_place(args)); it != nullptr; it = behaviors(it)->next_in_place(it))
+    {
+      buff(' ');
+      runtime::to_string(first(it), buff);
+    }
+    std::fwrite(buff.data(), 1, buff.size(), stdout);
+    return obj::nil::nil_const();
+  }
+
   object_ptr print(object_ptr const args)
   {
-    visit_object(
-      [](auto const typed_args) {
-        using T = typename decltype(typed_args)::value_type;
-
-        if constexpr(behavior::sequenceable<T>)
-        {
-          util::string_builder buff;
-          runtime::to_string(typed_args->first(), buff);
-          for(auto it(next_in_place(typed_args)); it != nullptr; it = next_in_place(it))
-          {
-            buff(' ');
-            runtime::to_string(it->first(), buff);
-          }
-          std::fwrite(buff.data(), 1, buff.size(), stdout);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("expected a sequence: {}",
-                                                typed_args->to_string()) };
-        }
-      },
-      args);
-    return obj::nil::nil_const();
+    return print_helper(args, [](object_ptr o, util::string_builder &b) {
+      return runtime::to_string(o, b);
+    });
   }
 
   object_ptr println(object_ptr const args)
   {
-    visit_object(
-      [](auto const typed_more) {
-        using T = typename decltype(typed_more)::value_type;
-
-        if constexpr(std::same_as<T, obj::nil>)
-        {
-          std::putc('\n', stdout);
-        }
-        else if constexpr(behavior::sequenceable<T>)
-        {
-          util::string_builder buff;
-          runtime::to_string(typed_more->first(), buff);
-          for(auto it(next_in_place(typed_more)); it != nullptr; it = next_in_place(it))
-          {
-            buff(' ');
-            runtime::to_string(it->first(), buff);
-          }
-          std::fwrite(buff.data(), 1, buff.size(), stdout);
-          std::putc('\n', stdout);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("expected a sequence: {}",
-                                                typed_more->to_string()) };
-        }
-      },
-      args);
-    return obj::nil::nil_const();
+    auto const res(print(args));
+    std::putc('\n', stdout);
+    return res;
   }
 
   object_ptr pr(object_ptr const args)
   {
-    visit_object(
-      [](auto const typed_args) {
-        using T = typename decltype(typed_args)::value_type;
-
-        if constexpr(behavior::sequenceable<T>)
-        {
-          util::string_builder buff;
-          runtime::to_code_string(typed_args->first(), buff);
-          for(auto it(next_in_place(typed_args)); it != nullptr; it = next_in_place(it))
-          {
-            buff(' ');
-            runtime::to_code_string(it->first(), buff);
-          }
-          std::fwrite(buff.data(), 1, buff.size(), stdout);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("expected a sequence: {}",
-                                                typed_args->to_string()) };
-        }
-      },
-      args);
-    return obj::nil::nil_const();
+    return print_helper(args, [](object_ptr o, util::string_builder &b) {
+      return runtime::to_code_string(o, b);
+    });
   }
 
   object_ptr prn(object_ptr const args)
   {
-    visit_object(
-      [](auto const typed_more) {
-        using T = typename decltype(typed_more)::value_type;
-
-        if constexpr(std::same_as<T, obj::nil>)
-        {
-          std::putc('\n', stdout);
-        }
-        else if constexpr(behavior::sequenceable<T>)
-        {
-          util::string_builder buff;
-          runtime::to_code_string(typed_more->first(), buff);
-          for(auto it(next_in_place(typed_more)); it != nullptr; it = next_in_place(it))
-          {
-            buff(' ');
-            runtime::to_code_string(it->first(), buff);
-          }
-          std::fwrite(buff.data(), 1, buff.size(), stdout);
-          std::putc('\n', stdout);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("expected a sequence: {}",
-                                                typed_more->to_string()) };
-        }
-      },
-      args);
-    return obj::nil::nil_const();
+    auto const res(pr(args));
+    std::putc('\n', stdout);
+    return res;
   }
 
   native_real to_real(object_ptr const o)
   {
-    return visit_number_like(
-      [](auto const typed_o) -> native_real { return typed_o->to_real(); },
-      [=]() -> native_real {
-        throw std::runtime_error{ fmt::format("not a number: {}", to_string(o)) };
-      },
-      o);
+    auto const bs(behaviors(o));
+    if(bs->is_number_like)
+    {
+      return bs->to_real(o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not a number: {}", bs->to_string(o)) };
+    }
   }
 
   native_bool equal(char const lhs, object_ptr const rhs)
@@ -248,7 +197,7 @@ namespace jank::runtime
       return !lhs;
     }
 
-    return visit_object([&](auto const typed_lhs) { return typed_lhs->equal(*rhs); }, lhs);
+    return behaviors(lhs)->equal(lhs, rhs);
   }
 
   object_ptr meta(object_ptr const m)
@@ -258,152 +207,97 @@ namespace jank::runtime
       return obj::nil::nil_const();
     }
 
-    return visit_object(
-      [](auto const typed_m) -> object_ptr {
-        using T = typename decltype(typed_m)::value_type;
-
-        if constexpr(behavior::metadatable<T>)
-        {
-          return typed_m->meta.unwrap_or(obj::nil::nil_const());
-        }
-        else
-        {
-          return obj::nil::nil_const();
-        }
-      },
-      m);
+    auto const bs(behaviors(m));
+    if(bs->is_metadatable)
+    {
+      return bs->meta(m).unwrap_or(obj::nil::nil_const());
+    }
+    else
+    {
+      return obj::nil::nil_const();
+    }
   }
 
   object_ptr with_meta(object_ptr const o, object_ptr const m)
   {
-    return visit_object(
-      [](auto const typed_o, object_ptr const m) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::metadatable<T>)
-        {
-          return typed_o->with_meta(m);
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not metadatable: {}", to_string(m)) };
-        }
-      },
-      o,
-      m);
+    auto const bs(behaviors(o));
+    if(bs->is_metadatable)
+    {
+      return bs->with_meta(o, m);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not metadatable: {}", bs->to_string(o)) };
+    }
   }
 
   object_ptr reset_meta(object_ptr const o, object_ptr const m)
   {
-    return visit_object(
-      [](auto const typed_o, object_ptr const m) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::metadatable<T>)
-        {
-          auto const meta(behavior::detail::validate_meta(m));
-          typed_o->meta = meta;
-          return m;
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not metadatable: {}", to_string(m)) };
-        }
-      },
-      o,
-      m);
+    auto const bs(behaviors(o));
+    if(bs->is_metadatable)
+    {
+      return bs->set_meta(o, m);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not metadatable: {}", bs->to_string(o)) };
+    }
   }
 
   obj::persistent_string_ptr subs(object_ptr const s, object_ptr const start)
   {
-    return visit_type<obj::persistent_string>(
-      [](auto const typed_s, native_integer const start) -> obj::persistent_string_ptr {
-        return typed_s->substring(start).expect_ok();
-      },
-      s,
-      to_int(start));
+    return try_object<obj::persistent_string>(s)->substring(to_int(start)).expect_ok();
   }
 
   obj::persistent_string_ptr subs(object_ptr const s, object_ptr const start, object_ptr const end)
   {
-    return visit_type<obj::persistent_string>(
-      [](auto const typed_s, native_integer const start, native_integer const end)
-        -> obj::persistent_string_ptr { return typed_s->substring(start, end).expect_ok(); },
-      s,
-      to_int(start),
-      to_int(end));
+    return try_object<obj::persistent_string>(s)->substring(to_int(start), to_int(end)).expect_ok();
   }
 
   native_integer first_index_of(object_ptr const s, object_ptr const m)
   {
-    return visit_type<obj::persistent_string>(
-      [](auto const typed_s, object_ptr const m) -> native_integer {
-        return typed_s->first_index_of(m);
-      },
-      s,
-      m);
+    return try_object<obj::persistent_string>(s)->first_index_of(m);
   }
 
   native_integer last_index_of(object_ptr const s, object_ptr const m)
   {
-    return visit_type<obj::persistent_string>(
-      [](auto const typed_s, object_ptr const m) -> native_integer {
-        return typed_s->last_index_of(m);
-      },
-      s,
-      m);
+    return try_object<obj::persistent_string>(s)->last_index_of(m);
   }
 
   native_bool is_named(object_ptr const o)
   {
-    return visit_object(
-      [](auto const typed_o) {
-        using T = typename decltype(typed_o)::value_type;
-
-        return behavior::nameable<T>;
-      },
-      o);
+    return behaviors(o)->is_named;
   }
 
   native_persistent_string name(object_ptr const o)
   {
-    return visit_object(
-      [](auto const typed_o) -> native_persistent_string {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(std::same_as<T, obj::persistent_string>)
-        {
-          return typed_o->data;
-        }
-        else if constexpr(behavior::nameable<T>)
-        {
-          return typed_o->get_name();
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not nameable: {}", typed_o->to_string()) };
-        }
-      },
-      o);
+    auto const bs(behaviors(o));
+    if(o->type == object_type::persistent_string)
+    {
+      return bs->to_string(o);
+    }
+    else if(bs->is_named)
+    {
+      return bs->get_name(o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not nameable: {}", bs->to_string(o)) };
+    }
   }
 
   object_ptr namespace_(object_ptr const o)
   {
-    return visit_object(
-      [](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::nameable<T>)
-        {
-          auto const ns(typed_o->get_namespace());
-          return (ns.empty() ? obj::nil::nil_const() : make_box<obj::persistent_string>(ns));
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not nameable: {}", typed_o->to_string()) };
-        }
-      },
-      o);
+    auto const bs(behaviors(o));
+    if(bs->is_named)
+    {
+      auto const ns(bs->get_namespace(o));
+      return (ns.empty() ? obj::nil::nil_const() : make_box<obj::persistent_string>(ns));
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not nameable: {}", bs->to_string(o)) };
+    }
   }
 
   object_ptr keyword(object_ptr const ns, object_ptr const name)
@@ -428,18 +322,12 @@ namespace jank::runtime
 
   native_bool is_callable(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> native_bool {
-        using T = typename decltype(typed_o)::value_type;
-
-        return std::is_base_of_v<behavior::callable, T>;
-      },
-      o);
+    return behaviors(o)->is_callable;
   }
 
   native_hash to_hash(object_ptr const o)
   {
-    return visit_object([=](auto const typed_o) -> native_hash { return typed_o->to_hash(); }, o);
+    return behaviors(o)->to_hash(o);
   }
 
   object_ptr macroexpand1(object_ptr const o)
@@ -530,20 +418,15 @@ namespace jank::runtime
 
   object_ptr deref(object_ptr const o)
   {
-    return visit_object(
-      [=](auto const typed_o) -> object_ptr {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(behavior::derefable<T>)
-        {
-          return typed_o->deref();
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("not derefable: {}", typed_o->to_string()) };
-        }
-      },
-      o);
+    auto const bs(behaviors(o));
+    if(bs->is_derefable)
+    {
+      return bs->deref(o);
+    }
+    else
+    {
+      throw std::runtime_error{ fmt::format("not derefable: {}", bs->to_string(o)) };
+    }
   }
 
   object_ptr volatile_(object_ptr const o)

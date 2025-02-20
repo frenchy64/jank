@@ -1,5 +1,9 @@
 #include <jank/runtime/obj/detail/base_persistent_map_sequence.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/obj/cons.hpp>
+#include <jank/runtime/obj/persistent_array_map_sequence.hpp>
+#include <jank/runtime/obj/persistent_hash_map_sequence.hpp>
+#include <jank/runtime/obj/persistent_sorted_map_sequence.hpp>
 
 namespace jank::runtime::obj::detail
 {
@@ -17,21 +21,23 @@ namespace jank::runtime::obj::detail
   template <typename PT, typename IT>
   native_bool base_persistent_map_sequence<PT, IT>::equal(object const &o) const
   {
-    return visit_seqable(
-      [this](auto const typed_o) {
-        auto seq(typed_o->fresh_seq());
-        for(auto it(fresh_seq()); it != nullptr;
-            it = it->next_in_place(), seq = seq->next_in_place())
-        {
-          if(seq == nullptr || !runtime::equal(it, seq->first()))
-          {
-            return false;
-          }
-        }
-        return true;
-      },
-      []() { return false; },
-      &o);
+    auto const bs(behaviors(&o));
+    if(!bs->is_seqable)
+    {
+      return false;
+    }
+
+    auto seq(bs->fresh_seq(&o));
+    //TODO next_in_place / first perf
+    for(object_ptr it(fresh_seq()); it != nullptr;
+        it = behaviors(it)->next_in_place(it), seq = behaviors(seq)->next_in_place(seq))
+    {
+      if(seq == nullptr || !runtime::equal(behaviors(it)->first(it), behaviors(seq)->first(seq)))
+      {
+        return false;
+      }
+    }
+    return true;
   }
 
   template <typename PT, typename IT>

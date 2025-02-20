@@ -1,6 +1,10 @@
 #include <jank/runtime/obj/persistent_hash_set.hpp>
-#include <jank/runtime/visit.hpp>
-#include <jank/runtime/core/seq.hpp>
+#include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/core/to_string.hpp>
+#include <jank/runtime/obj/nil.hpp>
+#include <jank/runtime/obj/persistent_hash_set_sequence.hpp>
+#include <jank/runtime/obj/transient_hash_set.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
 
 namespace jank::runtime::obj
 {
@@ -32,18 +36,26 @@ namespace jank::runtime::obj
     return ret;
   }
 
+  object_ptr persistent_hash_set::create_empty() const
+  {
+    static auto const ret(empty());
+    return meta.map_or(ret, [&](auto const m) { return ret->with_meta(m); });
+  }
+
   persistent_hash_set_ptr persistent_hash_set::create_from_seq(object_ptr const seq)
   {
-    return make_box<persistent_hash_set>(visit_seqable(
-      [](auto const typed_seq) -> persistent_hash_set::value_type {
-        runtime::detail::native_transient_hash_set transient;
-        for(auto it(typed_seq->fresh_seq()); it != nullptr; it = runtime::next_in_place(it))
-        {
-          transient.insert(it->first());
-        }
-        return transient.persistent();
-      },
-      seq));
+    auto const bs(behaviors(seq));
+    if(!bs->is_seqable)
+    {
+      throw std::runtime_error{ "not seqable: " + bs->to_code_string(seq) };
+    }
+    runtime::detail::native_transient_hash_set transient;
+    //TODO next_in_place / first perf
+    for(auto it(bs->fresh_seq(seq)); it != nullptr; it = behaviors(it)->next_in_place(it))
+    {
+      transient.insert(behaviors(it)->first(it));
+    }
+    return make_box<persistent_hash_set>(transient.persistent());
   }
 
   native_bool persistent_hash_set::equal(object const &o) const
@@ -53,25 +65,26 @@ namespace jank::runtime::obj
       return true;
     }
 
-    return visit_set_like(
-      [&](auto const typed_o) -> native_bool {
-        if(typed_o->count() != count())
-        {
-          return false;
-        }
+    auto const bs(behaviors(&o));
+    if(!bs->is_set)
+    {
+      return false;
+    }
 
-        for(auto const entry : data)
-        {
-          if(!typed_o->contains(entry))
-          {
-            return false;
-          }
-        }
+    if(bs->count(&o) != count())
+    {
+      return false;
+    }
 
-        return true;
-      },
-      []() { return false; },
-      &o);
+    for(auto const entry : data)
+    {
+      if(!bs->contains(&o, entry))
+      {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   void persistent_hash_set::to_string(util::string_builder &buff) const

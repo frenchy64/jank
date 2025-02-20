@@ -2,9 +2,12 @@
 
 #include <jank/native_persistent_string/fmt.hpp>
 #include <jank/runtime/obj/persistent_list.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
 #include <jank/runtime/core/seq.hpp>
 #include <jank/runtime/core/seq_ext.hpp>
+#include <jank/runtime/core/to_string.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
+#include <jank/runtime/obj/persistent_list_sequence.hpp>
 
 namespace jank::runtime::obj
 {
@@ -27,26 +30,19 @@ namespace jank::runtime::obj
       return make_box<persistent_list>();
     }
 
-    return visit_object(
-      [](auto const typed_s) -> persistent_list_ptr {
-        using T = typename decltype(typed_s)::value_type;
-
-        if constexpr(behavior::sequenceable<T>)
-        {
-          native_vector<object_ptr> v;
-          for(auto i(typed_s->fresh_seq()); i != nullptr; i = runtime::next_in_place(i))
-          {
-            v.emplace_back(i->first());
-          }
-          return make_box<persistent_list>(
-            runtime::detail::native_persistent_list{ v.rbegin(), v.rend() });
-        }
-        else
-        {
-          throw std::runtime_error{ fmt::format("invalid sequence: {}", typed_s->to_string()) };
-        }
-      },
-      s);
+    auto const bs(behaviors(s));
+    if(!bs->is_sequenceable && s != nil::nil_const())
+    {
+      throw std::runtime_error{ fmt::format("invalid sequence: {}", bs->to_string(s)) };
+    }
+    native_vector<object_ptr> v;
+    //TODO next_in_place / first perf
+    for(auto i(bs->fresh_seq(s)); i != nullptr; i = behaviors(i)->next_in_place(i))
+    {
+      v.emplace_back(runtime::first(i));
+    }
+    return make_box<persistent_list>(
+      runtime::detail::native_persistent_list{ v.rbegin(), v.rend() });
   }
 
   persistent_list_ptr persistent_list::create(persistent_list_ptr const s)
@@ -146,6 +142,12 @@ namespace jank::runtime::obj
     auto ret(make_box<persistent_list>(data));
     ret->meta = meta;
     return ret;
+  }
+
+  object_ptr persistent_list::create_empty() const
+  {
+    static auto const ret(empty());
+    return meta.map_or(ret, [&](auto const m) { return ret->with_meta(m); });
   }
 
   object_ptr persistent_list::peek() const

@@ -47,6 +47,8 @@ namespace jank::runtime::obj
       return ret;
     }
 
+    object_ptr create_empty() const;
+
     /* behavior::object_like */
     native_bool equal(object const &) const;
     native_persistent_string to_string() const;

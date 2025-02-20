@@ -4,7 +4,6 @@
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Transforms/InstCombine/InstCombine.h>
-#include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Scalar/Reassociate.h>
 #include <llvm/Transforms/Scalar/SimplifyCFG.h>
@@ -15,7 +14,8 @@
 #include <jank/codegen/llvm_processor.hpp>
 #include <jank/runtime/context.hpp>
 #include <jank/runtime/core.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/visit.hpp> // TODO delete this
 #include <jank/evaluate.hpp>
 #include <jank/profile/time.hpp>
 
@@ -393,37 +393,70 @@ namespace jank::codegen
   llvm::Value *llvm_processor::gen(expr::primitive_literal<expression> const &expr,
                                    expr::function_arity<expression> const &)
   {
-    auto const ret(runtime::visit_object(
-      [&](auto const typed_o) -> llvm::Value * {
-        using T = typename decltype(typed_o)::value_type;
-
-        if constexpr(std::same_as<T, runtime::obj::nil> || std::same_as<T, runtime::obj::boolean>
-                     || std::same_as<T, runtime::obj::integer>
-                     || std::same_as<T, runtime::obj::real> || std::same_as<T, runtime::obj::symbol>
-                     || std::same_as<T, runtime::obj::character>
-                     || std::same_as<T, runtime::obj::keyword>
-                     || std::same_as<T, runtime::obj::persistent_string>
-                     || std::same_as<T, runtime::obj::ratio>)
+    auto const o(expr.data);
+    llvm::Value *ret{};
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
+    switch(o->type)
+    {
+      case runtime::object_type::nil:
         {
-          return gen_global(typed_o);
+          ret = gen_global(expect_object<runtime::obj::nil>(o));
+          break;
         }
-        else if constexpr(std::same_as<T, runtime::obj::persistent_vector>
-                          || std::same_as<T, runtime::obj::persistent_list>
-                          || std::same_as<T, runtime::obj::persistent_hash_set>
-                          || std::same_as<T, runtime::obj::persistent_array_map>
-                          || std::same_as<T, runtime::obj::persistent_hash_map>
-                          /* Cons, etc. */
-                          || runtime::behavior::seqable<T>)
+      case runtime::object_type::boolean:
         {
-          return gen_global_from_read_string(typed_o);
+          ret = gen_global(expect_object<runtime::obj::boolean>(o));
+          break;
         }
-        else
+      case runtime::object_type::integer:
         {
-          throw std::runtime_error{ fmt::format("unimplemented constant codegen: {}\n",
-                                                typed_o->to_string()) };
+          ret = gen_global(expect_object<runtime::obj::integer>(o));
+          break;
         }
-      },
-      expr.data));
+      case runtime::object_type::real:
+        {
+          ret = gen_global(expect_object<runtime::obj::real>(o));
+          break;
+        }
+      case runtime::object_type::symbol:
+        {
+          ret = gen_global(expect_object<runtime::obj::symbol>(o));
+          break;
+        }
+      case runtime::object_type::character:
+        {
+          ret = gen_global(expect_object<runtime::obj::character>(o));
+          break;
+        }
+      case runtime::object_type::keyword:
+        {
+          ret = gen_global(expect_object<runtime::obj::keyword>(o));
+          break;
+        }
+      case runtime::object_type::persistent_string:
+        {
+          ret = gen_global(expect_object<runtime::obj::persistent_string>(o));
+          break;
+        }
+      case runtime::object_type::ratio:
+        {
+          ret = gen_global(expect_object<runtime::obj::ratio>(o));
+          break;
+        }
+      default:
+        {
+          auto const bs(behaviors(o));
+          if(!bs->is_seqable)
+          {
+            throw std::runtime_error{ fmt::format("unimplemented constant codegen: {}\n",
+                                                  bs->to_string(o)) };
+          }
+          ret = gen_global_from_read_string(o);
+          break;
+        }
+#pragma clang diagnostic pop
+    }
 
     if(expr.position == expression_position::tail)
     {
@@ -958,6 +991,76 @@ namespace jank::codegen
     return call;
   }
 
+  llvm::Value *llvm_processor::gen(expr::case_<expression> const &expr,
+                                   expr::function_arity<expression> const &arity)
+  {
+    auto const current_fn(ctx->builder->GetInsertBlock()->getParent());
+    auto const position{ expr.position };
+    auto const value(gen(expr.value_expr, arity));
+    auto const is_return{ position == expression_position::tail };
+    auto const integer_fn_type(llvm::FunctionType::get(
+      ctx->builder->getInt64Ty(),
+      { ctx->builder->getPtrTy(), ctx->builder->getInt64Ty(), ctx->builder->getInt64Ty() },
+      false));
+    auto const fn(
+      ctx->module->getOrInsertFunction("jank_shift_mask_case_integer", integer_fn_type));
+    llvm::SmallVector<llvm::Value *, 3> const args{
+      value,
+      llvm::ConstantInt::getSigned(ctx->builder->getInt64Ty(), expr.shift),
+      llvm::ConstantInt::getSigned(ctx->builder->getInt64Ty(), expr.mask)
+    };
+    auto const call(ctx->builder->CreateCall(fn, args));
+    auto const switch_val(ctx->builder->CreateIntCast(call, ctx->builder->getInt64Ty(), true));
+    auto const default_block{ llvm::BasicBlock::Create(*ctx->llvm_ctx, "default", current_fn) };
+    auto const switch_{ ctx->builder->CreateSwitch(switch_val, default_block, expr.keys.size()) };
+    auto const merge_block{ is_return
+                              ? nullptr
+                              : llvm::BasicBlock::Create(*ctx->llvm_ctx, "merge", current_fn) };
+
+    ctx->builder->SetInsertPoint(default_block);
+    auto const default_val{ gen(expr.default_expr, arity) };
+    if(!is_return)
+    {
+      ctx->builder->CreateBr(merge_block);
+    }
+    auto const default_block_exit{ ctx->builder->GetInsertBlock() };
+
+    llvm::SmallVector<llvm::BasicBlock *> case_blocks;
+    llvm::SmallVector<llvm::Value *> case_values;
+    for(size_t block_counter{}; block_counter < expr.keys.size(); ++block_counter)
+    {
+      auto const block_name{ fmt::format("case_{}", block_counter) };
+      auto const block{ llvm::BasicBlock::Create(*ctx->llvm_ctx, block_name, current_fn) };
+      switch_->addCase(
+        llvm::ConstantInt::getSigned(ctx->builder->getInt64Ty(), expr.keys[block_counter]),
+        block);
+
+      ctx->builder->SetInsertPoint(block);
+      auto const case_val{ gen(expr.exprs[block_counter], arity) };
+      case_values.push_back(case_val);
+      if(!is_return)
+      {
+        ctx->builder->CreateBr(merge_block);
+      }
+      case_blocks.push_back(ctx->builder->GetInsertBlock());
+    }
+
+    if(!is_return)
+    {
+      ctx->builder->SetInsertPoint(merge_block);
+      auto const phi{
+        ctx->builder->CreatePHI(ctx->builder->getPtrTy(), expr.keys.size() + 1, "switch_tmp")
+      };
+      phi->addIncoming(default_val, default_block_exit);
+      for(size_t i{}; i < case_blocks.size(); ++i)
+      {
+        phi->addIncoming(case_values[i], case_blocks[i]);
+      }
+      return phi;
+    }
+    return nullptr;
+  }
+
   llvm::Value *llvm_processor::gen_var(obj::symbol_ptr const qualified_name) const
   {
     auto const found(ctx->var_globals.find(qualified_name));
@@ -1373,30 +1476,26 @@ namespace jank::codegen
       auto const call(ctx->builder->CreateCall(create_fn, args));
       ctx->builder->CreateStore(call, global);
 
-      runtime::visit_object(
-        [&](auto const typed_o) {
-          using T = typename decltype(typed_o)::value_type;
+      auto const bs(behaviors(o));
+      if(bs->is_metadatable)
+      {
+        auto const ometa(bs->meta(o));
+        if(ometa)
+        {
+          auto const set_meta_fn_type(
+            llvm::FunctionType::get(ctx->builder->getVoidTy(),
+                                    { ctx->builder->getPtrTy(), ctx->builder->getPtrTy() },
+                                    false));
+          auto const set_meta_fn(
+            ctx->module->getOrInsertFunction("jank_set_meta", set_meta_fn_type));
 
-          if constexpr(behavior::metadatable<T>)
-          {
-            if(typed_o->meta)
-            {
-              auto const set_meta_fn_type(
-                llvm::FunctionType::get(ctx->builder->getVoidTy(),
-                                        { ctx->builder->getPtrTy(), ctx->builder->getPtrTy() },
-                                        false));
-              auto const set_meta_fn(
-                ctx->module->getOrInsertFunction("jank_set_meta", set_meta_fn_type));
-
-              /* TODO: This shouldn't be its own global; we don't need to reference it later. */
-              auto const meta(gen_global_from_read_string(typed_o->meta.unwrap()));
-              auto const meta_name(fmt::format("{}_meta", name));
-              meta->setName(meta_name);
-              ctx->builder->CreateCall(set_meta_fn, { call, meta });
-            }
-          }
-        },
-        o);
+          /* TODO: This shouldn't be its own global; we don't need to reference it later. */
+          auto const meta(gen_global_from_read_string(ometa.unwrap()));
+          auto const meta_name(fmt::format("{}_meta", name));
+          meta->setName(meta_name);
+          ctx->builder->CreateCall(set_meta_fn, { call, meta });
+        }
+      }
 
       if(prev_block == ctx->global_ctor_block)
       {

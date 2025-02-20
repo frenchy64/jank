@@ -1,6 +1,7 @@
 #include <jank/runtime/obj/symbol.hpp>
 #include <jank/runtime/core/to_string.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/rtti.hpp>
+#include <jank/runtime/behavior/metadatable.hpp>
 
 namespace jank::runtime::obj
 {
@@ -74,7 +75,7 @@ namespace jank::runtime::obj
 
   native_integer symbol::compare(object const &o) const
   {
-    return visit_type<symbol>([this](auto const typed_o) { return compare(*typed_o); }, &o);
+    return compare(*try_object<symbol>(&o));
   }
 
   native_integer symbol::compare(symbol const &s) const

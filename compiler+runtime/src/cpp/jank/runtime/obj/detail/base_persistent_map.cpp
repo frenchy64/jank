@@ -1,7 +1,11 @@
 #include <jank/runtime/obj/detail/base_persistent_map.hpp>
-#include <jank/runtime/behavior/associatively_readable.hpp>
-#include <jank/runtime/behavior/map_like.hpp>
-#include <jank/runtime/visit.hpp>
+#include <jank/runtime/behaviors.hpp>
+#include <jank/runtime/core/to_string.hpp>
+#include <jank/runtime/obj/persistent_array_map.hpp>
+#include <jank/runtime/obj/persistent_sorted_map.hpp>
+#include <jank/runtime/obj/persistent_sorted_map_sequence.hpp>
+#include <jank/runtime/obj/persistent_hash_map.hpp>
+#include <jank/runtime/obj/persistent_hash_map_sequence.hpp>
 
 namespace jank::runtime::obj::detail
 {
@@ -19,27 +23,28 @@ namespace jank::runtime::obj::detail
       return true;
     }
 
-    return visit_map_like(
-      [&](auto const typed_o) -> native_bool {
-        if(typed_o->count() != count())
-        {
-          return false;
-        }
+    auto const bs(behaviors(&o));
+    if(!bs->is_map)
+    {
+      return false;
+    }
 
-        for(auto const &entry : static_cast<PT const *>(this)->data)
-        {
-          auto const found(typed_o->contains(entry.first));
+    if(bs->count(&o) != count())
+    {
+      return false;
+    }
 
-          if(!found || !runtime::equal(entry.second, typed_o->get(entry.first)))
-          {
-            return false;
-          }
-        }
+    for(auto const &entry : static_cast<PT const *>(this)->data)
+    {
+      auto const found(bs->contains(&o, entry.first));
 
-        return true;
-      },
-      []() { return false; },
-      &o);
+      if(!found || !runtime::equal(entry.second, bs->get(&o, entry.first)))
+      {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   template <typename PT, typename ST, typename V>

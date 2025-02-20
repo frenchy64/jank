@@ -2,6 +2,7 @@
 #include <jank/runtime/obj/persistent_vector.hpp>
 #include <jank/runtime/core.hpp>
 #include <jank/runtime/core/seq_ext.hpp>
+#include <jank/runtime/obj/cons.hpp>
 
 namespace jank::runtime::obj
 {
