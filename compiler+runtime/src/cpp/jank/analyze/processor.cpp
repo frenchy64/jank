@@ -241,12 +241,18 @@ namespace jank::analyze
       native_vector<expression_ptr> exprs{};
     };
 
-    auto const keys_exprs{ visit_map_like(
-      [&](auto const typed_imap_obj) -> string_result<keys_and_exprs> {
-        keys_and_exprs ret{};
-        for(auto seq{ typed_imap_obj->seq() }; seq != nullptr; seq = seq->next())
+    auto const keys_exprs{
+      [&](auto const imap_obj) -> string_result<keys_and_exprs> {
+        auto const bs(behaviors(imap_obj));
+        if(!bs->is_map)
         {
-          auto const e{ seq->first() };
+          return err("Case keys and expressions should be a map-like.");
+        }
+        keys_and_exprs ret{};
+        //TODO next / first perf
+        for(auto seq{ bs->seq(imap_obj) }; seq != nullptr; seq = behaviors(seq)->next(seq))
+        {
+          auto const e{ behaviors(seq)->first(seq) };
           auto const k_obj{ runtime::nth(e, make_box(0)) };
           auto const v_obj{ runtime::nth(e, make_box(1)) };
           if(k_obj.data->type != object_type::integer)
@@ -263,11 +269,7 @@ namespace jank::analyze
           ret.exprs.push_back(expr.expect_ok());
         }
         return ret;
-      },
-      [&]() -> string_result<keys_and_exprs> {
-        return err("Case keys and expressions should be a map-like.");
-      },
-      imap_obj) };
+      }(imap_obj) };
 
     if(keys_exprs.is_err())
     {

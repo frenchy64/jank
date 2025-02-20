@@ -31,7 +31,7 @@ namespace jank::runtime::obj
     }
 
     auto const bs(behaviors(s));
-    if(!bs->is_sequenceable && !is_nil(s))
+    if(!bs->is_sequenceable && s != nil::nil_const())
     {
       throw std::runtime_error{ fmt::format("invalid sequence: {}", bs->to_string(s)) };
     }
