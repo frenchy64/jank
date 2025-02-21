@@ -58,4 +58,15 @@ namespace jank::runtime::obj
     throw "TODO hash dynamic";
     //return hash = hash::combine(hash::visit(tag), hash::visit(form));
   }
+
+  /* behavior::metadatable */
+  native_bool is_metadatable()
+  {
+    return behaviors->is_metadatable;
+  }
+
+  native_bool set_meta(object_ptr const m)
+  {
+    return behaviors->set_meta(this, m);
+  }
 }
