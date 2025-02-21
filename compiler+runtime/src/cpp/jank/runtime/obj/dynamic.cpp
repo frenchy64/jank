@@ -19,7 +19,7 @@ namespace jank::runtime::obj
       return false;
     }
 
-    auto const s(expect_object<dynamic>(&o));
+    //auto const s(expect_object<dynamic>(&o));
     //return runtime::equal(tag, s->tag) && TODO;
     throw "dynamic equal";
   }
