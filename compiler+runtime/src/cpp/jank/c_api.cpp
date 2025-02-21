@@ -857,18 +857,37 @@ extern "C"
 
   void jank_set_meta(jank_object_ptr const o, jank_object_ptr const meta)
   {
-    auto const o_obj(reinterpret_cast<object *>(o));
-    auto const meta_obj(reinterpret_cast<object *>(meta));
-    runtime::visit_object(
-      [&](auto const typed_o) {
-        using T = typename decltype(typed_o)::value_type;
+    runtime::visit_dynamic(
+      [](auto const o, auto const meta_obj) {
+        using T = typename decltype(o)::value_type;
 
         if constexpr(behavior::metadatable<T>)
         {
-          typed_o->meta = behavior::detail::validate_meta(meta_obj);
+          if constexpr(std::same_as<T, obj::dynamic>)
+          {
+            if(!o->is_metadatable)
+            {
+              return;
+            }
+          }
+          auto const m(behavior::detail::validate_meta(meta_obj));
+          if constexpr(std::same_as<T, obj::dynamic>)
+          {
+            o->set_meta(m);
+          }
+          else
+          {
+            o->meta = m;
+          }
+        }
+        else
+        {
+          throw std::runtime_error{ "cannot set metadata on "
+                                    + object_type_str(o->type) };
         }
       },
-      o_obj);
+      reinterpret_cast<object *>(o),
+      reinterpret_cast<object *>(meta));
   }
 
   void jank_throw(jank_object_ptr const o)

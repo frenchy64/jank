@@ -186,6 +186,7 @@ add_library(
   src/cpp/jank/runtime/context.cpp
   src/cpp/jank/runtime/ns.cpp
   src/cpp/jank/runtime/var.cpp
+  src/cpp/jank/runtime/behaviors.cpp
   src/cpp/jank/runtime/obj/nil.cpp
   src/cpp/jank/runtime/obj/number.cpp
   src/cpp/jank/runtime/obj/native_function_wrapper.cpp
@@ -230,6 +231,7 @@ add_library(
   src/cpp/jank/runtime/obj/atom.cpp
   src/cpp/jank/runtime/obj/volatile.cpp
   src/cpp/jank/runtime/obj/delay.cpp
+  src/cpp/jank/runtime/obj/dynamic.cpp
   src/cpp/jank/runtime/obj/reduced.cpp
   src/cpp/jank/runtime/behavior/callable.cpp
   src/cpp/jank/runtime/behavior/metadatable.cpp
