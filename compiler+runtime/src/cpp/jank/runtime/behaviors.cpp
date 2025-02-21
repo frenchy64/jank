@@ -2,6 +2,7 @@
 
 #include <jank/runtime/visit.hpp>
 #include <jank/runtime/rtti.hpp>
+#include <jank/runtime/convert.hpp>
 #include <jank/runtime/behavior/associatively_readable.hpp>
 #include <jank/runtime/behavior/associatively_writable.hpp>
 #include <jank/runtime/behavior/callable.hpp>
@@ -325,7 +326,8 @@ namespace jank::runtime
    *                            :dissoc (fn [this k] ..)}
    *  :associatively_readable {:get (fn [this k] ..)
    *                           :get_default (fn [this k fallback] ..)
-   *                           :get_entry (fn [this k] ..)}
+   *                           :get_entry (fn [this k] ..)
+   *                           :contains (fn [this k] ..)}
    *  :associatively_writeable_in_place {:assoc_in_place (fn [this k v] ..)
    *                                     :dissoc_in_place (fn [this k] ..)}
    *  :countable {:count (fn [this] ..)}
@@ -337,9 +339,32 @@ namespace jank::runtime
    *  :metadatable {:with_meta (fn [this m] ..)
    *                :get_meta (fn [this] ..)
    *                :set_meta (fn [this m] ..)}
-   *  :callable {..}
+   *  :callable {:call0 (fn [this])
+   *             :call1 (fn [this a0])
+   *             :call2 (fn [this a0 a1])
+   *             :call3 (fn [this a0 a1 a2])
+   *             :call4 (fn [this a0 a1 a2 a3])
+   *             :call5 (fn [this a0 a1 a2 a3 a4])
+   *             :call6 (fn [this a0 a1 a2 a3 a4 a5])
+   *             :call7 (fn [this a0 a1 a2 a3 a4 a5 a6])
+   *             :call8 (fn [this a0 a1 a2 a3 a4 a5 a6 a7])
+   *             :call9 (fn [this a0 a1 a2 a3 a4 a5 a6 a7 a8])
+   *             :call10 (fn [this a0 a1 a2 a3 a4 a5 a6 a7 a8 a9])
+   *             :get_arity_flags (fn [..])} ;TODO
    *  :comparable {:compare (fn [this that] ...)}
-   *  }
+   *  :nameable {:get_name (fn [this])
+   *             :get_namespace (fn [this])}
+   *  :derefable {:deref (fn [this])}
+   *  :indexable {:nth (fn [this i])
+   *              :nth_default (fn [this i d])}
+   *  :map_like {}
+   *  :set_like {}
+   *  :stackable {:peek (fn [this])
+   *              :pop (fn [this])}
+   *  :number_like {:to_integer (fn [this])
+   *                :to_real (fn [this])}
+   *  :conjable {:conj (fn [this v])}
+   *  :conjable_in_place {:conj_in_place (fn [this v])}}
    *  */
   object_behaviors::object_behaviors(persistent_hash_map * const mp)
   {
@@ -565,13 +590,13 @@ namespace jank::runtime
       //TODO start arguments from 1 instead of 0
       this->call0 = [](object_ptr const o) { return dynamic_call(call0, o); };
       this->call1
-        = [](object_ptr const o, object_ptr const a0) { return dynamic_call(call0, o, a0); };
+        = [](object_ptr const o, object_ptr const a0) { return dynamic_call(call1, o, a0); };
       this->call2 = [](object_ptr const o, object_ptr const a0, object_ptr const a1) {
-        return dynamic_call(call0, o, a0, a1);
+        return dynamic_call(call2, o, a0, a1);
       };
       this->call3
         = [](object_ptr const o, object_ptr const a0, object_ptr const a1, object_ptr const a2) {
-          return dynamic_call(call0, o, a0, a1, a2);
+          return dynamic_call(call3, o, a0, a1, a2);
           };
       this->call4 = [](object_ptr const o,
                        object_ptr const a0,
@@ -579,7 +604,7 @@ namespace jank::runtime
                        object_ptr const a2,
                        object_ptr const a3) {
 
-        return dynamic_call(call0, o, a0, a1, a2, a3);
+        return dynamic_call(call4, o, a0, a1, a2, a3);
       };
       this->call5 = [](object_ptr const o,
                        object_ptr const a0,
@@ -587,7 +612,7 @@ namespace jank::runtime
                        object_ptr const a2,
                        object_ptr const a3,
                        object_ptr const a4) {
-        return dynamic_call(call0, o, a0, a1, a2, a3, a4);
+        return dynamic_call(call5, o, a0, a1, a2, a3, a4);
       };
       this->call6
         = [](object_ptr const o,
@@ -597,7 +622,7 @@ namespace jank::runtime
              object_ptr const a3,
              object_ptr const a4,
              object_ptr const a5) {
-          return dynamic_call(call0, o, a0, a1, a2, a3, a4, a5);
+          return dynamic_call(call6, o, a0, a1, a2, a3, a4, a5);
         };
       this->call7
         = [](object_ptr const o,
@@ -608,7 +633,7 @@ namespace jank::runtime
              object_ptr const a4,
              object_ptr const a5,
              object_ptr const a6) {
-          return dynamic_call(call0, o, a0, a1, a2, a3, a4, a5, a6);
+          return dynamic_call(call7, o, a0, a1, a2, a3, a4, a5, a6);
         };
       this->call8 = [](object_ptr const o,
                        object_ptr const a0,
@@ -619,7 +644,7 @@ namespace jank::runtime
                        object_ptr const a5,
                        object_ptr const a6,
                        object_ptr const a7) {
-        return dynamic_call(call0, o, a0, a1, a2, a3, a4, a5, a6, a7);
+        return dynamic_call(call8, o, a0, a1, a2, a3, a4, a5, a6, a7);
       };
       this->call9 = [](object_ptr const o,
                        object_ptr const a0,
@@ -631,7 +656,7 @@ namespace jank::runtime
                        object_ptr const a6,
                        object_ptr const a7,
                        object_ptr const a8) {
-        return dynamic_call(call0, o, a0, a1, a2, a3, a4, a5, a6, a7, a8);
+        return dynamic_call(call9, o, a0, a1, a2, a3, a4, a5, a6, a7, a8);
       };
       this->call10 = [](object_ptr const o,
                         object_ptr const a0,
@@ -644,68 +669,89 @@ namespace jank::runtime
                         object_ptr const a7,
                         object_ptr const a8,
                         object_ptr const a9) {
-        return dynamic_call(call0, o, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
+        return dynamic_call(call10, o, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
       };
       this->get_arity_flags
         = [](object_ptr const o) { throw "TODO get_arity_flags" };
     }
 
-
-    //TODO from here
-    if constexpr(behavior::nameable<T>)
+    auto const nameable(runtime::get(m, __rt_ctx->intern_keyword("nameable").expect_ok()));
+    if(truthy(nameable))
     {
+      auto const get_name(runtime::get(nameable, __rt_ctx->intern_keyword("get_name").expect_ok()));
+      auto const get_namespace(runtime::get(nameable, __rt_ctx->intern_keyword("get_namespace").expect_ok()));
       this->is_named = true;
-      this->get_name = [](object_ptr const o) { return expect_object<T>(o)->get_name(); };
-      this->get_namespace = [](object_ptr const o) { return expect_object<T>(o)->get_namespace(); };
+      this->get_name = [&](object_ptr const o) { return dynamic_call(get_name, o); };
+      this->get_namespace = [&](object_ptr const o) { return dynamic_call(get_namespace, o); };
     }
-    if constexpr(behavior::derefable<T>)
+    auto const derefable(runtime::get(m, __rt_ctx->intern_keyword("derefable").expect_ok()));
+    if(truthy(derefable))
     {
+      auto const deref(runtime::get(derefable, __rt_ctx->intern_keyword("deref").expect_ok()));
       this->is_derefable = true;
-      this->deref = [](object_ptr const o) { return expect_object<T>(o)->deref(); };
+      this->deref = [&](object_ptr const o) { return dynamic_call(deref, o); };
     }
-    if constexpr(behavior::indexable<T>)
+    auto const indexable(runtime::get(m, __rt_ctx->intern_keyword("indexable").expect_ok()));
+    if(truthy(indexable))
     {
+      auto const nth(runtime::get(indexable, __rt_ctx->intern_keyword("nth").expect_ok()));
       this->is_indexable = true;
-      this->nth = [](object_ptr const o, object_ptr const i) { return expect_object<T>(o)->nth(i); };
+      this->nth = [](object_ptr const o, object_ptr const i) { return dynamic_call(nth, o, i); };
       this->nth_default = [](object_ptr const o, object_ptr const i, object_ptr const d) {
-        return expect_object<T>(o)->nth(i, d);
+        return dynamic_call(nth_default, o, i, d);
       };
     }
-    if constexpr(behavior::map_like<T>)
+    auto const map_like(runtime::get(m, __rt_ctx->intern_keyword("map_like").expect_ok()));
+    if(truthy(map_like))
     {
       this->is_map = true;
     }
-    if constexpr(behavior::set_like<T>)
+    auto const set_like(runtime::get(m, __rt_ctx->intern_keyword("set_like").expect_ok()));
+    if(truthy(set_like))
     {
       this->is_set = true;
     }
-    if constexpr(behavior::stackable<T>)
+    auto const stackable(runtime::get(m, __rt_ctx->intern_keyword("stackable").expect_ok()));
+    if(truthy(stackable))
     {
+      auto const peek(runtime::get(stackable, __rt_ctx->intern_keyword("peek").expect_ok()));
+      auto const pop(runtime::get(stackable, __rt_ctx->intern_keyword("pop").expect_ok()));
       this->is_stackable = true;
-      this->peek = [](object_ptr const o) { return expect_object<T>(o)->peek(); };
-      this->pop = [](object_ptr const o) { return expect_object<T>(o)->pop(); };
+      this->peek = [&](object_ptr const o) { return dynamic_call(peek, o); };
+      this->pop = [&](object_ptr const o) { return dynamic_call(pop, o); };
     }
-    if constexpr(behavior::number_like<T>)
+    auto const number_like(runtime::get(m, __rt_ctx->intern_keyword("number_like").expect_ok()));
+    if(truthy(number_like))
     {
+      auto const to_integer(runtime::get(number_like, __rt_ctx->intern_keyword("to_integer").expect_ok()));
+      auto const to_real(runtime::get(number_like, __rt_ctx->intern_keyword("to_real").expect_ok()));
       this->is_number_like = true;
-      this->to_integer = [](object_ptr const o) { return expect_object<T>(o)->to_integer(); };
-      this->to_real = [](object_ptr const o) { return expect_object<T>(o)->to_real(); };
+      this->to_integer = [&](object_ptr const o) { return dynamic_call(to_integer, o); };
+      this->to_real = [&](object_ptr const o) { return dynamic_call(to_real, o); };
     }
-    if constexpr(behavior::set_like<T> || behavior::associatively_readable<T>)
+    //if(behavior::set_like<T> || behavior::associatively_readable<T>)
+    if(truthy(associatively_readable))
     {
+      auto const contains(runtime::get(associatively_readable, __rt_ctx->intern_keyword("contains").expect_ok()));
       this->contains
-        = [](object_ptr const m, object_ptr const k) { return expect_object<T>(m)->contains(k); };
+        = [&](object_ptr const m, object_ptr const k) { return dynamic_call(contains, m, k) };
     }
-    if constexpr(behavior::conjable<T>)
+    auto const conjable(runtime::get(m, __rt_ctx->intern_keyword("conjable").expect_ok()));
+    if(truthy(conjable))
     {
+      auto const conj(runtime::get(conjable, __rt_ctx->intern_keyword("conj").expect_ok()));
       this->is_conjable = true;
-      this->conj = [](object_ptr const o, object_ptr const v) { return expect_object<T>(o)->conj(v); };
+      this->conj = [&](object_ptr const o, object_ptr const v) {
+        return dynamic_call(conj, o, v);
+      };
     }
-    if constexpr(behavior::conjable_in_place<T>)
+    auto const conjable_in_place(runtime::get(m, __rt_ctx->intern_keyword("conjable_in_place").expect_ok()));
+    if(truthy(conjable_in_place))
     {
+      auto const conj_in_place(runtime::get(conjable_in_place, __rt_ctx->intern_keyword("conj_in_place").expect_ok()));
       this->is_conjable_in_place = true;
       this->conj_in_place
-        = [](object_ptr const o, object_ptr const v) { return expect_object<T>(o)->conj_in_place(v); };
+        = [&](object_ptr const o, object_ptr const v) { return dynamic_call(conj_in_place, o, v); };
     }
   }
 
