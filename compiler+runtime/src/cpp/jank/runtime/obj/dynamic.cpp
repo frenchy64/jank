@@ -5,11 +5,13 @@
 
 namespace jank::runtime::obj
 {
-  dynamic::dynamic(object_ptr const tag, void* const wrapped, object_ptr const behaviors)
-    : tag{ tag }
+  dynamic::dynamic(object_ptr const tag, object_behaviors_ptr const behaviors, void* const impl)
+    : tag{ try_object<keyword>(tag) }
     , wrapped{ wrapped }
     , behaviors{ behaviors }
+    , impl{ impl }
   {
+    assert(is_qualified_keyword(tag));
   }
 
   native_bool dynamic::equal(object const &o) const

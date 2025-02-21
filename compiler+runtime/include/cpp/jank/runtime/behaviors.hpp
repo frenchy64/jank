@@ -5,13 +5,10 @@
 
 namespace jank::runtime
 {
-  // TODO try splitting up
-  //   all_behaviors
-  //   -> countable_behaviors
-  //      -> count
-  // TODO behaviors<T> might let us avoid try_object calls
   struct object_behaviors
   {
+    object_behaviors() = default;
+
     template <typename T>
     requires behavior::object_like<T>
     object_behaviors(native_box<T>);
@@ -32,7 +29,6 @@ namespace jank::runtime
     native_bool is_countable{};
     native_bool is_derefable{};
     native_bool is_indexable{};
-    native_bool is_function_like{};
     native_bool is_map{};
     native_bool is_metadatable{};
     native_bool is_named{};

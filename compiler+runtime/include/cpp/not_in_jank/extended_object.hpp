@@ -8,10 +8,6 @@ namespace not_in_jank
 
   struct extended_object : gc
   {
-    //TODO object_type ???
-    static constexpr object_type obj_type{ object_type::extended_object };
-    static constexpr native_bool pointer_free{ false };
-
     extended_object() = default;
     extended_object(object_ptr val);
 
@@ -28,4 +24,6 @@ namespace not_in_jank
     object base{ obj_type };
     object_ptr val{};
   };
+
+  static object_ptr create_extended_object();
 }

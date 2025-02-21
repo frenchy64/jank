@@ -12,7 +12,7 @@ namespace jank::runtime::obj
     static constexpr object_type obj_type{ object_type::dynamic };
     static constexpr native_bool pointer_free{ false };
 
-    dynamic(object_ptr tag, void* wrapped, object_ptr behaviors);
+    dynamic(object_ptr tag, object_behaviors_ptr behaviors);
 
     /* behavior::object_like */
     native_bool equal(object const &) const;
@@ -30,9 +30,26 @@ namespace jank::runtime::obj
 
     object base{ obj_type };
 
-    object_ptr tag{};
-    void* wrapped{};
-    object_behaviors behaviors{};
+    /* Tag must be a qualified keyword under a namespace you control. */
+    keyword_ptr tag{} const;
+    object_behaviors_ptr behaviors{} const;
+    /* The implementation details for this dynamic object is wrapping.
+     * Only relevant for C++ implementors.
+     *
+     * equal = [](object_ptr const lhs, object_ptr const rhs) {
+     *   auto const lhs_dyn(expect_object<dynamic> lhs);
+     *   auto const lhs_impl(<reinterpret_cast<a_cpp_class *>(lhs_dyn->impl));
+     *   auto const rhs_dyn(dyn_cast<dynamic>(rhs));
+     *   if(!rhs_dyn || !equal(lhs_dyn->tag, rhs_dyn->tag))
+     *   {
+     *     return false;
+     *   }
+     *   auto const rhs_impl(<reinterpret_cast<a_cpp_class *>(rhs_dyn->impl));
+     *   // call method on wrapped class
+     *   return lhs_impl->equivalent(rhs_impl);
+     * }
+     * */
+    void* impl{} const;
 
     mutable native_hash hash{};
   };

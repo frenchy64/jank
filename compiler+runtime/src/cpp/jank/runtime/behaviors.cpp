@@ -143,9 +143,7 @@ namespace jank::runtime
         return meta_obj;
       };
     }
-    if constexpr(std::is_base_of_v<behavior::callable, T>)
     {
-      this->is_callable = true;
     }
     if constexpr(behavior::comparable<T>)
     {
@@ -154,9 +152,9 @@ namespace jank::runtime
         return expect_object<T>(lhs)->compare(*rhs);
       };
     }
-    if constexpr(behavior::function_like<T>)
+    if constexpr(std::is_base_of_v<behavior::callable, T>)
     {
-      this->is_function_like = true;
+      this->is_callable = true;
       //TODO start arguments from 1 instead of 0
       this->call0 = [](object_ptr const o) { return expect_object<T>(o)->call(); };
       this->call1
@@ -311,6 +309,7 @@ namespace jank::runtime
     }
   }
 
+
   /* wrap a persistent map
    *
    * {:object_like {:to_string (fn [this] ...)
@@ -368,13 +367,91 @@ namespace jank::runtime
    *  */
   object_behaviors::object_behaviors(persistent_hash_map * const mp)
   {
-    auto const object_like(runtime::get(m, __rt_ctx->intern_keyword("object_like").expect_ok()));
-    if(truthy(object_like))
+    static auto const to_string_kw(__rt_ctx->intern_keyword("to_string").expect_ok());
+    static auto const to_code_string_kw(__rt_ctx->intern_keyword("to_code_string").expect_ok());
+    static auto const to_hash_kw(__rt_ctx->intern_keyword("to_hash").expect_ok());
+    static auto const equal_kw(__rt_ctx->intern_keyword("equal").expect_ok());
+    static auto const seqable_kw(__rt_ctx->intern_keyword("seqable").expect_ok());
+    static auto const seq_kw(__rt_ctx->intern_keyword("seq").expect_ok());
+    static auto const fresh_seq_kw(__rt_ctx->intern_keyword("fresh_seq").expect_ok());
+    static auto const sequential_kw(__rt_ctx->intern_keyword("sequential").expect_ok());
+    static auto const sequenceable_kw(__rt_ctx->intern_keyword("sequenceable").expect_ok());
+    static auto const first_kw(__rt_ctx->intern_keyword("first").expect_ok());
+    static auto const next_kw(__rt_ctx->intern_keyword("next").expect_ok());
+    static auto const sequential_kw(__rt_ctx->intern_keyword("sequential").expect_ok());
+    static auto const next_in_place_kw(__rt_ctx->intern_keyword("next_in_place").expect_ok());
+    static auto const collection_like_kw(__rt_ctx->intern_keyword("collection_like").expect_ok());
+    static auto const empty_kw(__rt_ctx->intern_keyword("empty").expect_ok());
+    static auto const associatively_readable_kw(__rt_ctx->intern_keyword("associatively_readable").expect_ok());
+    static auto const associatively_writeable_kw(__rt_ctx->intern_keyword("associatively_writeable").expect_ok());
+    static auto const assoc_kw(__rt_ctx->intern_keyword("assoc").expect_ok());
+    static auto const dissoc_kw(__rt_ctx->intern_keyword("dissoc").expect_ok());
+    static auto const get_kw(__rt_ctx->intern_keyword("get").expect_ok());
+    static auto const get_default_kw(__rt_ctx->intern_keyword("get_default").expect_ok());
+    static auto const get_entry_kw(__rt_ctx->intern_keyword("get_entry").expect_ok());
+    static auto const associatively_writeable_in_place_kw(__rt_ctx->intern_keyword("associatively_writeable_in_place").expect_ok());
+    static auto const assoc_in_place_kw(__rt_ctx->intern_keyword("assoc_in_place").expect_ok());
+    static auto const dissoc_in_place_kw(__rt_ctx->intern_keyword("dissoc_in_place").expect_ok());
+    static auto const countable_kw(__rt_ctx->intern_keyword("countable").expect_ok());
+    static auto const count_kw(__rt_ctx->intern_keyword("count").expect_ok());
+    static auto const transientable_kw(__rt_ctx->intern_keyword("transientable").expect_ok());
+    static auto const to_transient_kw(__rt_ctx->intern_keyword("to_transient").expect_ok());
+    static auto const persistentable_kw(__rt_ctx->intern_keyword("persistentable").expect_ok());
+    static auto const to_persistent_kw(__rt_ctx->intern_keyword("to_persistent").expect_ok());
+    static auto const chunk_like_kw(__rt_ctx->intern_keyword("chunk_like").expect_ok());
+    static auto const chunk_next_kw(__rt_ctx->intern_keyword("chunk_next").expect_ok());
+    static auto const chunk_next_in_place_kw(__rt_ctx->intern_keyword("chunk_next_in_place").expect_ok());
+    static auto const chunkable_kw(__rt_ctx->intern_keyword("chunkable").expect_ok());
+    static auto const chunked_first_kw(__rt_ctx->intern_keyword("chunked_first").expect_ok());
+    static auto const chunked_next_kw(__rt_ctx->intern_keyword("chunked_next").expect_ok());
+    static auto const metadatable_kw(__rt_ctx->intern_keyword("metadatable").expect_ok());
+    static auto const with_meta_kw(__rt_ctx->intern_keyword("with_meta").expect_ok());
+    static auto const get_meta_kw(__rt_ctx->intern_keyword("get_meta").expect_ok());
+    static auto const set_meta_kw(__rt_ctx->intern_keyword("set_meta").expect_ok());
+    static auto const callable_kw(__rt_ctx->intern_keyword("callable").expect_ok());
+    static auto const comparable_kw(__rt_ctx->intern_keyword("comparable").expect_ok());
+    static auto const compare_kw(__rt_ctx->intern_keyword("compare").expect_ok());
+    static auto const function_like_kw(__rt_ctx->intern_keyword("function_like").expect_ok());
+    static auto const call0_kw(__rt_ctx->intern_keyword("call0").expect_ok());
+    static auto const call1_kw(__rt_ctx->intern_keyword("call1").expect_ok());
+    static auto const call2_kw(__rt_ctx->intern_keyword("call2").expect_ok());
+    static auto const call3_kw(__rt_ctx->intern_keyword("call3").expect_ok());
+    static auto const call4_kw(__rt_ctx->intern_keyword("call4").expect_ok());
+    static auto const call5_kw(__rt_ctx->intern_keyword("call5").expect_ok());
+    static auto const call6_kw(__rt_ctx->intern_keyword("call6").expect_ok());
+    static auto const call7_kw(__rt_ctx->intern_keyword("call7").expect_ok());
+    static auto const call8_kw(__rt_ctx->intern_keyword("call8").expect_ok());
+    static auto const call9_kw(__rt_ctx->intern_keyword("call9").expect_ok());
+    static auto const call10_kw(__rt_ctx->intern_keyword("call10").expect_ok());
+    static auto const get_arity_flags_kw(__rt_ctx->intern_keyword("get_arity_flags").expect_ok());
+    static auto const nameable_kw(__rt_ctx->intern_keyword("nameable").expect_ok());
+    static auto const get_name_kw(__rt_ctx->intern_keyword("get_name").expect_ok());
+    static auto const get_namespace_kw(__rt_ctx->intern_keyword("get_namespace").expect_ok());
+    static auto const derefable_kw(__rt_ctx->intern_keyword("derefable").expect_ok());
+    static auto const deref_kw(__rt_ctx->intern_keyword("deref").expect_ok());
+    static auto const indexable_kw(__rt_ctx->intern_keyword("indexable").expect_ok());
+    static auto const nth_kw(__rt_ctx->intern_keyword("nth").expect_ok());
+    static auto const map_like_kw(__rt_ctx->intern_keyword("map_like").expect_ok());
+    static auto const set_like_kw(__rt_ctx->intern_keyword("set_like").expect_ok());
+    static auto const stackable_kw(__rt_ctx->intern_keyword("stackable").expect_ok());
+    static auto const peek_kw(__rt_ctx->intern_keyword("peek").expect_ok());
+    static auto const pop_kw(__rt_ctx->intern_keyword("pop").expect_ok());
+    static auto const number_like_kw(__rt_ctx->intern_keyword("number_like").expect_ok());
+    static auto const to_integer_kw(__rt_ctx->intern_keyword("to_integer").expect_ok());
+    static auto const to_real_kw(__rt_ctx->intern_keyword("to_real").expect_ok());
+    static auto const contains_kw(__rt_ctx->intern_keyword("contains").expect_ok());
+    static auto const conjable_kw(__rt_ctx->intern_keyword("conjable").expect_ok());
+    static auto const conj_kw(__rt_ctx->intern_keyword("conj").expect_ok());
+    static auto const conjable_in_place_kw(__rt_ctx->intern_keyword("conjable_in_place").expect_ok());
+    static auto const conj_in_place_kw(__rt_ctx->intern_keyword("conj_in_place").expect_ok());
+
+    auto const object_like_map(runtime::get(m, object_like_kw));
+    if(truthy(object_like_map))
     {
-      auto const to_string(runtime::get(object_like, __rt_ctx->intern_keyword("to_string").expect_ok()));
-      auto const to_code_string(runtime::get(object_like, __rt_ctx->intern_keyword("to_code_string").expect_ok()));
-      auto const to_hash(runtime::get(object_like, __rt_ctx->intern_keyword("to_hash").expect_ok()));
-      auto const equal(runtime::get(object_like, __rt_ctx->intern_keyword("equal").expect_ok()));
+      auto const to_string(runtime::get(object_like_map, to_string_kw));
+      auto const to_code_string(runtime::get(object_like_map, to_code_string_kw));
+      auto const to_hash(runtime::get(object_like_map, to_hash_kw));
+      auto const equal(runtime::get(object_like_map, equal_kw));
       this->is_object_like = true;
       this->to_string = [&](object_ptr const o) { return dynamic_call(to_string, o); };
       this->to_string_builder = [&](object_ptr const o, util::string_builder &buff) {
@@ -388,11 +465,11 @@ namespace jank::runtime
       };
       //this->base = [&](object_ptr const o) { return "dynamic"; };
     }
-    auto const seqable(runtime::get(m, __rt_ctx->intern_keyword("seqable").expect_ok()));
-    if(truthy(seqable))
+    auto const seqable_map(runtime::get(m, seqable_kw));
+    if(truthy(seqable_map))
     {
-      auto const seq(runtime::get(seqable, __rt_ctx->intern_keyword("seq").expect_ok()));
-      auto const fresh_seq(runtime::get(seqable, __rt_ctx->intern_keyword("fresh_seq").expect_ok()));
+      auto const seq(runtime::get(seqable_map, seq_kw));
+      auto const fresh_seq(runtime::get(seqable_map, fresh_seq_kw));
       this->is_seqable = true;
       this->seq = [&](object_ptr const o) {
         auto const s(dynamic_call(seq, o));
@@ -411,16 +488,16 @@ namespace jank::runtime
         return s;
       };
     }
-    auto const sequential(runtime::get(m, __rt_ctx->intern_keyword("sequential").expect_ok()));
-    if(truthy(sequential))
+    auto const sequential_map(runtime::get(m, sequential_kw));
+    if(truthy(sequential_map))
     {
       this->is_sequential = true;
     }
-    auto const sequenceable(runtime::get(m, __rt_ctx->intern_keyword("sequential").expect_ok()));
-    if(truthy(sequenceable))
+    auto const sequenceable_map(runtime::get(m, sequenceable_kw));
+    if(truthy(sequenceable_map))
     {
-      auto const first(runtime::get(sequenceable, __rt_ctx->intern_keyword("first").expect_ok()));
-      auto const next(runtime::get(sequenceable, __rt_ctx->intern_keyword("next").expect_ok()));
+      auto const first(runtime::get(sequenceable_map, first_kw));
+      auto const next(runtime::get(sequenceable_map, next_kw));
       this->is_sequenceable = true;
       this->first = [&](object_ptr const o) { return dynamic_call(first, o); };
       this->next = [&](object_ptr const o) {
@@ -432,10 +509,10 @@ namespace jank::runtime
         return s;
       };
     }
-    auto const sequenceable_in_place(runtime::get(m, __rt_ctx->intern_keyword("sequential").expect_ok()));
-    if(truthy(sequenceable_in_place))
+    auto const sequenceable_in_place_map(runtime::get(m, sequential_kw));
+    if(truthy(sequenceable_in_place_map))
     {
-      auto const next_in_place(runtime::get(sequenceable_in_place, __rt_ctx->intern_keyword("next_in_place").expect_ok()));
+      auto const next_in_place(runtime::get(sequenceable_in_place_map, next_in_place_kw));
       this->is_sequenceable_in_place = true;
       this->next_in_place = [&](object_ptr const o) {
         auto const s(dynamic_call(next, o));
@@ -446,23 +523,23 @@ namespace jank::runtime
         return s;
       };
     }
-    auto const collection_like(runtime::get(m, __rt_ctx->intern_keyword("collection_like").expect_ok()));
-    if(truthy(collection_like))
+    auto const collection_like_map(runtime::get(m, collection_like_kw));
+    if(truthy(collection_like_map))
     {
-      auto const empty(runtime::get(collection_like, __rt_ctx->intern_keyword("empty").expect_ok()));
+      auto const empty(runtime::get(collection_like_map, empty_kw));
       this->is_collection = true;
       this->empty = [&](object_ptr const c) { return dynamic_call(empty, o); };
     }
-    auto const associatively_readable(runtime::get(m, __rt_ctx->intern_keyword("associatively_readable").expect_ok()));
-    auto const associatively_writeable(runtime::get(m, __rt_ctx->intern_keyword("associatively_writeable").expect_ok()));
-    if(truthy(associatively_readable) && truthy(associatively_writeable))
+    auto const associatively_readable_map(runtime::get(m, associatively_readable_kw));
+    auto const associatively_writeable_map(runtime::get(m, associatively_writeable_kw));
+    if(truthy(associatively_readable_map) && truthy(associatively_writeable_map))
     {
       this->is_associative = true;
     }
-    if(truthy(associatively_writeable))
+    if(truthy(associatively_writeable_map))
     {
-      auto const assoc(runtime::get(associatively_writeable, __rt_ctx->intern_keyword("assoc").expect_ok()));
-      auto const dissoc(runtime::get(associatively_writeable, __rt_ctx->intern_keyword("dissoc").expect_ok()));
+      auto const assoc(runtime::get(associatively_writeable_map, assoc_kw));
+      auto const dissoc(runtime::get(associatively_writeable_map, dissoc_kw));
       this->is_associatively_writable = true;
       this->assoc = [&](object_ptr const m, object_ptr const k, object_ptr const v) {
         return dynamic_call(assoc, m, k v);
@@ -472,11 +549,11 @@ namespace jank::runtime
           return dynamic_call(dissoc, m, k);
         };
     }
-    if(truthy(associatively_readable)
+    if(truthy(associatively_readable_map)
     {
-      auto const get(runtime::get(associatively_readable, __rt_ctx->intern_keyword("get").expect_ok()));
-      auto const get_default(runtime::get(associatively_readable, __rt_ctx->intern_keyword("get_default").expect_ok()));
-      auto const get_entry(runtime::get(associatively_readable, __rt_ctx->intern_keyword("get_entry").expect_ok()));
+      auto const get(runtime::get(associatively_readable_map, get_kw));
+      auto const get_default(runtime::get(associatively_readable_map, get_default_kw));
+      auto const get_entry(runtime::get(associatively_readable_map, get_entry_kw));
       this->is_associatively_readable = true;
       this->get = [&](object_ptr const m, object_ptr const k) { return dynamic_call(get, m, k); };
       this->get_default = [&](object_ptr const m, object_ptr const k, object_ptr const d) {
@@ -487,11 +564,11 @@ namespace jank::runtime
         return dynamic_call(get_entry, m, k);
       };
     }
-    auto const associatively_writeable_in_place(runtime::get(m, __rt_ctx->intern_keyword("associatively_writeable_in_place").expect_ok()));
-    if(truthy(associatively_writeable_in_place))
+    auto const associatively_writeable_in_place_map(runtime::get(m, associatively_writeable_in_place_kw));
+    if(truthy(associatively_writeable_in_place_map))
     {
-      auto const assoc_in_place(runtime::get(associatively_writeable_in_place, __rt_ctx->intern_keyword("assoc_in_place").expect_ok()));
-      auto const dissoc_in_place(runtime::get(associatively_writeable_in_place, __rt_ctx->intern_keyword("dissoc_in_place").expect_ok()));
+      auto const assoc_in_place(runtime::get(associatively_writeable_in_place_map, assoc_in_place_kw));
+      auto const dissoc_in_place(runtime::get(associatively_writeable_in_place_map, dissoc_in_place_kw));
       this->is_associatively_writable_in_place = true;
       this->assoc_in_place = [&](object_ptr const m, object_ptr const k, object_ptr const v) {
         return dynamic_call(assoc_in_place, m, k, v);
@@ -500,52 +577,52 @@ namespace jank::runtime
         return dynamic_call(dissoc_in_place, m, k);
       };
     }
-    auto const countable(runtime::get(m, __rt_ctx->intern_keyword("countable").expect_ok()));
-    if(truthy(countable))
+    auto const countable_map(runtime::get(m, countable_kw));
+    if(truthy(countable_map))
     {
-      auto const count(runtime::get(countable, __rt_ctx->intern_keyword("count").expect_ok()));
+      auto const count(runtime::get(countable_map, count_kw));
       this->is_countable = true;
       this->count = [](object_ptr const o) { return dynamic_call(count, o); };
     }
-    auto const transientable(runtime::get(m, __rt_ctx->intern_keyword("transientable").expect_ok()));
-    if(truthy(transientable))
+    auto const transientable_map(runtime::get(m, transientable_kw));
+    if(truthy(transientable_map))
     {
-      auto const to_transient(runtime::get(transientable, __rt_ctx->intern_keyword("to_transient").expect_ok()));
+      auto const to_transient(runtime::get(transientable_map, to_transient_kw));
       this->is_transientable = true;
       this->to_transient = [&](object_ptr const o) { return dynamic_call(to_transient, o) };
     }
-    auto const persistentable(runtime::get(m, __rt_ctx->intern_keyword("persistentable").expect_ok()));
-    if(truthy(persistentable))
+    auto const persistentable_map(runtime::get(m, persistentable_kw));
+    if(truthy(persistentable_map))
     {
-      auto const to_persistent(runtime::get(persistentable, __rt_ctx->intern_keyword("to_persistent").expect_ok()));
+      auto const to_persistent(runtime::get(persistentable_map, to_persistent_kw));
       this->is_persistentable = true;
       this->to_persistent = [&](object_ptr const o) { return dynamic_call(to_persistent, o); };
     }
-    auto const chunk_like(runtime::get(m, __rt_ctx->intern_keyword("chunk_like").expect_ok()));
-    if(truthy(chunk_like))
+    auto const chunk_like_map(runtime::get(m, chunk_like_kw));
+    if(truthy(chunk_like_map))
     {
-      auto const chunk_next(runtime::get(chunk_like, __rt_ctx->intern_keyword("chunk_next").expect_ok()));
-      auto const chunk_next_in_place(runtime::get(chunk_like, __rt_ctx->intern_keyword("chunk_next_in_place").expect_ok()));
+      auto const chunk_next(runtime::get(chunk_like_map, chunk_next_kw));
+      auto const chunk_next_in_place(runtime::get(chunk_like_map, chunk_next_in_place_kw));
       this->is_chunk_like = true;
       this->chunk_next = [&](object_ptr const o) { return dynamic_call(chunk_next, o); };
       this->chunk_next_in_place
         = [](object_ptr const o) { return dynamic_call(chunk_next_in_place, o); };
     }
-    auto const chunkable(runtime::get(m, __rt_ctx->intern_keyword("chunkable").expect_ok()));
-    if(truthy(chunkable))
+    auto const chunkable_map(runtime::get(m, chunkable_kw));
+    if(truthy(chunkable_map))
     {
-      auto const chunked_first(runtime::get(chunkable, __rt_ctx->intern_keyword("chunked_first").expect_ok()));
-      auto const chunked_next(runtime::get(chunkable, __rt_ctx->intern_keyword("chunked_next").expect_ok()));
+      auto const chunked_first(runtime::get(chunkable_map, chunked_first_kw));
+      auto const chunked_next(runtime::get(chunkable_map, chunked_next_kw));
       this->is_chunkable = true;
       this->chunked_first = [](object_ptr const o) { return dynamic_call(chunked_first, o); };
       this->chunked_next = [](object_ptr const o) { return dynamic_call(chunked_next, o); };
     }
-    auto const metadatable(runtime::get(m, __rt_ctx->intern_keyword("metadatable").expect_ok()));
-    if(truthy(metadatable))
+    auto const metadatable_map(runtime::get(m, metadatable_kw));
+    if(truthy(metadatable_map))
     {
-      auto const with_meta(runtime::get(metadatable, __rt_ctx->intern_keyword("with_meta").expect_ok()));
-      auto const get_meta(runtime::get(metadatable, __rt_ctx->intern_keyword("get_meta").expect_ok()));
-      auto const set_meta(runtime::get(metadatable, __rt_ctx->intern_keyword("set_meta").expect_ok()));
+      auto const with_meta(runtime::get(metadatable_map, with_meta_kw));
+      auto const get_meta(runtime::get(metadatable_map, get_meta_kw));
+      auto const set_meta(runtime::get(metadatable_map, set_meta_kw));
       this->is_metadatable = true;
       this->with_meta
         = [&](object_ptr const o, object_ptr const m) { return dynamic_call(with_meta, o, m); };
@@ -557,36 +634,31 @@ namespace jank::runtime
         return dynamic_call(set_meta, o, meta_obj);
       };
     }
-    auto const callable(runtime::get(m, __rt_ctx->intern_keyword("callable").expect_ok()));
-    if(truthy(callable))
+    auto const comparable_map(runtime::get(m, comparable_kw));
+    if(truthy(comparable_map))
     {
-      this->is_callable = true;
-    }
-    auto const comparable(runtime::get(m, __rt_ctx->intern_keyword("comparable").expect_ok()));
-    if(truthy(comparable))
-    {
-      auto const compare(runtime::get(comparable, __rt_ctx->intern_keyword("compare").expect_ok()));
+      auto const compare(runtime::get(comparable_map, compare_kw));
       this->is_comparable = true;
       this->compare = [](object_ptr const lhs, object const rhs) {
         return dynamic_call(compare, lhs, make_box(rhs));
       };
     }
-    auto const function_like(runtime::get(m, __rt_ctx->intern_keyword("function_like").expect_ok()));
-    if(behavior::function_like<T>)
+    auto const callable_map(runtime::get(m, callable_kw));
+    if(truthy(callable_map))
     {
-      auto const call0(runtime::get(comparable, __rt_ctx->intern_keyword("call0").expect_ok()));
-      auto const call1(runtime::get(comparable, __rt_ctx->intern_keyword("call1").expect_ok()));
-      auto const call2(runtime::get(comparable, __rt_ctx->intern_keyword("call2").expect_ok()));
-      auto const call3(runtime::get(comparable, __rt_ctx->intern_keyword("call3").expect_ok()));
-      auto const call4(runtime::get(comparable, __rt_ctx->intern_keyword("call4").expect_ok()));
-      auto const call5(runtime::get(comparable, __rt_ctx->intern_keyword("call5").expect_ok()));
-      auto const call6(runtime::get(comparable, __rt_ctx->intern_keyword("call6").expect_ok()));
-      auto const call7(runtime::get(comparable, __rt_ctx->intern_keyword("call7").expect_ok()));
-      auto const call8(runtime::get(comparable, __rt_ctx->intern_keyword("call8").expect_ok()));
-      auto const call9(runtime::get(comparable, __rt_ctx->intern_keyword("call9").expect_ok()));
-      auto const call10(runtime::get(comparable, __rt_ctx->intern_keyword("call10").expect_ok()));
-      auto const get_arity_flags(runtime::get(comparable, __rt_ctx->intern_keyword("get_arity_flags").expect_ok()));
-      this->is_function_like = true;
+      auto const call0(runtime::get(callable_map, call0_kw));
+      auto const call1(runtime::get(callable_map, call1_kw));
+      auto const call2(runtime::get(callable_map, call2_kw));
+      auto const call3(runtime::get(callable_map, call3_kw));
+      auto const call4(runtime::get(callable_map, call4_kw));
+      auto const call5(runtime::get(callable_map, call5_kw));
+      auto const call6(runtime::get(callable_map, call6_kw));
+      auto const call7(runtime::get(callable_map, call7_kw));
+      auto const call8(runtime::get(callable_map, call8_kw));
+      auto const call9(runtime::get(callable_map, call9_kw));
+      auto const call10(runtime::get(callable_map, call10_kw));
+      auto const get_arity_flags(runtime::get(callable_map, get_arity_flags_kw));
+      this->is_callable = true;
       //TODO start arguments from 1 instead of 0
       this->call0 = [](object_ptr const o) { return dynamic_call(call0, o); };
       this->call1
@@ -675,80 +747,80 @@ namespace jank::runtime
         = [](object_ptr const o) { throw "TODO get_arity_flags" };
     }
 
-    auto const nameable(runtime::get(m, __rt_ctx->intern_keyword("nameable").expect_ok()));
-    if(truthy(nameable))
+    auto const nameable_map(runtime::get(m, nameable_kw));
+    if(truthy(nameable_map))
     {
-      auto const get_name(runtime::get(nameable, __rt_ctx->intern_keyword("get_name").expect_ok()));
-      auto const get_namespace(runtime::get(nameable, __rt_ctx->intern_keyword("get_namespace").expect_ok()));
+      auto const get_name(runtime::get(nameable_map, get_name_kw));
+      auto const get_namespace(runtime::get(nameable_map, get_namespace_kw));
       this->is_named = true;
       this->get_name = [&](object_ptr const o) { return dynamic_call(get_name, o); };
       this->get_namespace = [&](object_ptr const o) { return dynamic_call(get_namespace, o); };
     }
-    auto const derefable(runtime::get(m, __rt_ctx->intern_keyword("derefable").expect_ok()));
-    if(truthy(derefable))
+    auto const derefable_map(runtime::get(m, derefable_kw));
+    if(truthy(derefable_map))
     {
-      auto const deref(runtime::get(derefable, __rt_ctx->intern_keyword("deref").expect_ok()));
+      auto const deref(runtime::get(derefable_map, deref_kw));
       this->is_derefable = true;
       this->deref = [&](object_ptr const o) { return dynamic_call(deref, o); };
     }
-    auto const indexable(runtime::get(m, __rt_ctx->intern_keyword("indexable").expect_ok()));
-    if(truthy(indexable))
+    auto const indexable_map(runtime::get(m, indexable_kw));
+    if(truthy(indexable_map))
     {
-      auto const nth(runtime::get(indexable, __rt_ctx->intern_keyword("nth").expect_ok()));
+      auto const nth(runtime::get(indexable_map, nth_kw));
       this->is_indexable = true;
       this->nth = [](object_ptr const o, object_ptr const i) { return dynamic_call(nth, o, i); };
       this->nth_default = [](object_ptr const o, object_ptr const i, object_ptr const d) {
         return dynamic_call(nth_default, o, i, d);
       };
     }
-    auto const map_like(runtime::get(m, __rt_ctx->intern_keyword("map_like").expect_ok()));
-    if(truthy(map_like))
+    auto const map_like_map(runtime::get(m, map_like_kw));
+    if(truthy(map_like_map))
     {
       this->is_map = true;
     }
-    auto const set_like(runtime::get(m, __rt_ctx->intern_keyword("set_like").expect_ok()));
-    if(truthy(set_like))
+    auto const set_like_map(runtime::get(m, set_like_kw));
+    if(truthy(set_like_map))
     {
       this->is_set = true;
     }
-    auto const stackable(runtime::get(m, __rt_ctx->intern_keyword("stackable").expect_ok()));
-    if(truthy(stackable))
+    auto const stackable_map(runtime::get(m, stackable_kw));
+    if(truthy(stackable_map))
     {
-      auto const peek(runtime::get(stackable, __rt_ctx->intern_keyword("peek").expect_ok()));
-      auto const pop(runtime::get(stackable, __rt_ctx->intern_keyword("pop").expect_ok()));
+      auto const peek(runtime::get(stackable_map, peek_kw));
+      auto const pop(runtime::get(stackable_map, pop_kw));
       this->is_stackable = true;
       this->peek = [&](object_ptr const o) { return dynamic_call(peek, o); };
       this->pop = [&](object_ptr const o) { return dynamic_call(pop, o); };
     }
-    auto const number_like(runtime::get(m, __rt_ctx->intern_keyword("number_like").expect_ok()));
-    if(truthy(number_like))
+    auto const number_like_map(runtime::get(m, number_like_kw));
+    if(truthy(number_like_map))
     {
-      auto const to_integer(runtime::get(number_like, __rt_ctx->intern_keyword("to_integer").expect_ok()));
-      auto const to_real(runtime::get(number_like, __rt_ctx->intern_keyword("to_real").expect_ok()));
+      auto const to_integer(runtime::get(number_like_map, to_integer_kw));
+      auto const to_real(runtime::get(number_like_map, to_real_kw));
       this->is_number_like = true;
       this->to_integer = [&](object_ptr const o) { return dynamic_call(to_integer, o); };
       this->to_real = [&](object_ptr const o) { return dynamic_call(to_real, o); };
     }
     //if(behavior::set_like<T> || behavior::associatively_readable<T>)
-    if(truthy(associatively_readable))
+    if(truthy(associatively_readable_map))
     {
-      auto const contains(runtime::get(associatively_readable, __rt_ctx->intern_keyword("contains").expect_ok()));
+      auto const contains(runtime::get(associatively_readable_map, contains_kw));
       this->contains
         = [&](object_ptr const m, object_ptr const k) { return dynamic_call(contains, m, k) };
     }
-    auto const conjable(runtime::get(m, __rt_ctx->intern_keyword("conjable").expect_ok()));
+    auto const conjable_map(runtime::get(m, conjable_kw));
     if(truthy(conjable))
     {
-      auto const conj(runtime::get(conjable, __rt_ctx->intern_keyword("conj").expect_ok()));
+      auto const conj(runtime::get(conjable, conj_kw));
       this->is_conjable = true;
       this->conj = [&](object_ptr const o, object_ptr const v) {
         return dynamic_call(conj, o, v);
       };
     }
-    auto const conjable_in_place(runtime::get(m, __rt_ctx->intern_keyword("conjable_in_place").expect_ok()));
-    if(truthy(conjable_in_place))
+    auto const conjable_in_place_map(runtime::get(m, conjable_in_place_kw));
+    if(truthy(conjable_in_place_map))
     {
-      auto const conj_in_place(runtime::get(conjable_in_place, __rt_ctx->intern_keyword("conj_in_place").expect_ok()));
+      auto const conj_in_place(runtime::get(conjable_in_place_map, conj_in_place_kw));
       this->is_conjable_in_place = true;
       this->conj_in_place
         = [&](object_ptr const o, object_ptr const v) { return dynamic_call(conj_in_place, o, v); };
