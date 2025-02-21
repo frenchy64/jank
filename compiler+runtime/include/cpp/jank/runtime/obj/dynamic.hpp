@@ -12,7 +12,7 @@ namespace jank::runtime::obj
     static constexpr object_type obj_type{ object_type::dynamic };
     static constexpr native_bool pointer_free{ false };
 
-    dynamic(object_ptr tag, object_behaviors_ptr behaviors);
+    dynamic(object_ptr tag, object_behaviors_ptr behaviors, void* impl);
 
     /* behavior::object_like */
     native_bool equal(object const &) const;
