@@ -7,6 +7,7 @@ namespace jank::runtime
 {
   struct object_behaviors
   {
+    /* Wrap an arbitrary class, defaulting to no behaviors. */
     object_behaviors() = default;
 
     template <typename T>

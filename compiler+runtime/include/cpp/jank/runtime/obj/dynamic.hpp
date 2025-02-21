@@ -33,7 +33,7 @@ namespace jank::runtime::obj
     /* Tag must be a qualified keyword under a namespace you control. */
     keyword_ptr tag{} const;
     object_behaviors_ptr behaviors{} const;
-    /* The implementation details for this dynamic object is wrapping.
+    /* The implementation details for this dynamic object.
      * Only relevant for C++ implementors.
      *
      * equal = [](object_ptr const lhs, object_ptr const rhs) {

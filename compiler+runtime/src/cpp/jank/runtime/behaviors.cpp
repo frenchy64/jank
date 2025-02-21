@@ -23,7 +23,7 @@
 
 namespace jank::runtime
 {
-  /* wrap an object */
+  /* Wrap an object, forwarding all behaviors to the wrapped object. */
   template <typename T>
   requires behavior::object_like<T>
   object_behaviors::object_behaviors(native_box<T>)
@@ -310,7 +310,7 @@ namespace jank::runtime
   }
 
 
-  /* wrap a persistent map
+  /* Wrap a persistent map
    *
    * {:object_like {:to_string (fn [this] ...)
    *                :to_code_string (fn [this] ...)
