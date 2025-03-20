@@ -47,6 +47,7 @@
 #include <jank/runtime/obj/atom.hpp>
 #include <jank/runtime/obj/volatile.hpp>
 #include <jank/runtime/obj/delay.hpp>
+#include <jank/runtime/obj/dynamic.hpp>
 #include <jank/runtime/obj/reduced.hpp>
 #include <jank/runtime/obj/tagged_literal.hpp>
 #include <jank/runtime/ns.hpp>
@@ -67,6 +68,316 @@ namespace jank::runtime
   template <typename F, typename... Args>
   concept visitable = requires(F f) { f(obj::nil_ptr{}, std::declval<Args>()...); };
 
+  template <typename F, typename... Args>
+  requires visitable<F, Args...>
+  [[gnu::hot]]
+  auto visit_dynamic(F const &fn, object const * const const_erased, Args &&...args)
+  {
+    assert(const_erased);
+    auto * const erased(const_cast<object *>(const_erased));
+
+    switch(erased->type)
+    {
+      case object_type::nil:
+        {
+          return fn(expect_object<obj::nil>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::boolean:
+        {
+          return fn(expect_object<obj::boolean>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::integer:
+        {
+          return fn(expect_object<obj::integer>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::real:
+        {
+          return fn(expect_object<obj::real>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_string:
+        {
+          return fn(expect_object<obj::persistent_string>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::keyword:
+        {
+          return fn(expect_object<obj::keyword>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::symbol:
+        {
+          return fn(expect_object<obj::symbol>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::character:
+        {
+          return fn(expect_object<obj::character>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_vector:
+        {
+          return fn(expect_object<obj::persistent_vector>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_list:
+        {
+          return fn(expect_object<obj::persistent_list>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_array_map:
+        {
+          return fn(expect_object<obj::persistent_array_map>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_array_map_sequence:
+        {
+          return fn(expect_object<obj::persistent_array_map_sequence>(erased),
+                    std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_hash_map:
+        {
+          return fn(expect_object<obj::persistent_hash_map>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_hash_map_sequence:
+        {
+          return fn(expect_object<obj::persistent_hash_map_sequence>(erased),
+                    std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_sorted_map:
+        {
+          return fn(expect_object<obj::persistent_sorted_map>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_sorted_map_sequence:
+        {
+          return fn(expect_object<obj::persistent_sorted_map_sequence>(erased),
+                    std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::transient_hash_map:
+        {
+          return fn(expect_object<obj::transient_hash_map>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::transient_sorted_map:
+        {
+          return fn(expect_object<obj::transient_sorted_map>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::transient_vector:
+        {
+          return fn(expect_object<obj::transient_vector>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_hash_set:
+        {
+          return fn(expect_object<obj::persistent_hash_set>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_sorted_set:
+        {
+          return fn(expect_object<obj::persistent_sorted_set>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::transient_hash_set:
+        {
+          return fn(expect_object<obj::transient_hash_set>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::transient_sorted_set:
+        {
+          return fn(expect_object<obj::transient_sorted_set>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::cons:
+        {
+          return fn(expect_object<obj::cons>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::range:
+        {
+          return fn(expect_object<obj::range>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::integer_range:
+        {
+          return fn(expect_object<obj::integer_range>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::repeat:
+        {
+          return fn(expect_object<obj::repeat>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::ratio:
+        {
+          return fn(expect_object<obj::ratio>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::native_array_sequence:
+        {
+          return fn(expect_object<obj::native_array_sequence>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::native_vector_sequence:
+        {
+          return fn(expect_object<obj::native_vector_sequence>(erased),
+                    std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_string_sequence:
+        {
+          return fn(expect_object<obj::persistent_string_sequence>(erased),
+                    std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_vector_sequence:
+        {
+          return fn(expect_object<obj::persistent_vector_sequence>(erased),
+                    std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_list_sequence:
+        {
+          return fn(expect_object<obj::persistent_list_sequence>(erased),
+                    std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_hash_set_sequence:
+        {
+          return fn(expect_object<obj::persistent_hash_set_sequence>(erased),
+                    std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::persistent_sorted_set_sequence:
+        {
+          return fn(expect_object<obj::persistent_sorted_set_sequence>(erased),
+                    std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::iterator:
+        {
+          return fn(expect_object<obj::iterator>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::lazy_sequence:
+        {
+          return fn(expect_object<obj::lazy_sequence>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::chunk_buffer:
+        {
+          return fn(expect_object<obj::chunk_buffer>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::array_chunk:
+        {
+          return fn(expect_object<obj::array_chunk>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::chunked_cons:
+        {
+          return fn(expect_object<obj::chunked_cons>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::native_function_wrapper:
+        {
+          return fn(expect_object<obj::native_function_wrapper>(erased),
+                    std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::native_pointer_wrapper:
+        {
+          return fn(expect_object<obj::native_pointer_wrapper>(erased),
+                    std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::jit_function:
+        {
+          return fn(expect_object<obj::jit_function>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::jit_closure:
+        {
+          return fn(expect_object<obj::jit_closure>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::multi_function:
+        {
+          return fn(expect_object<obj::multi_function>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::atom:
+        {
+          return fn(expect_object<obj::atom>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::volatile_:
+        {
+          return fn(expect_object<obj::volatile_>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::reduced:
+        {
+          return fn(expect_object<obj::reduced>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::delay:
+        {
+          return fn(expect_object<obj::delay>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::ns:
+        {
+          return fn(expect_object<ns>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::var:
+        {
+          return fn(expect_object<var>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::var_thread_binding:
+        {
+          return fn(expect_object<var_thread_binding>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::var_unbound_root:
+        {
+          return fn(expect_object<var_unbound_root>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::tagged_literal:
+        {
+          return fn(expect_object<obj::tagged_literal>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      case object_type::dynamic:
+        {
+          return fn(expect_object<obj::dynamic>(erased), std::forward<Args>(args)...);
+        }
+        break;
+      default:
+        {
+          util::string_builder sb;
+          sb("invalid object type: ");
+          sb(object_type_str(erased->type));
+          sb(" raw value ");
+          sb(static_cast<int>(erased->type));
+          throw std::runtime_error{ sb.str() };
+        }
+        break;
+    }
+  }
+
+  //TODO define in terms of visit_dynamic
   template <typename F, typename... Args>
   requires visitable<F, Args...>
   [[gnu::hot]]
@@ -358,6 +669,11 @@ namespace jank::runtime
           return fn(expect_object<obj::tagged_literal>(erased), std::forward<Args>(args)...);
         }
         break;
+      case object_type::dynamic:
+        {
+          throw std::runtime_error{ "dynamic not allowed" };
+        }
+        break;
       default:
         {
           util::string_builder sb;
@@ -387,6 +703,7 @@ namespace jank::runtime
     }
   }
 
+  //TODO support dynamic
   template <typename F1, typename F2, typename... Args>
   requires(visitable<F1, Args...> && !std::convertible_to<F2, object const *>)
   [[gnu::hot]]
@@ -561,6 +878,7 @@ namespace jank::runtime
       std::forward<Args>(args)...);
   }
 
+  //TODO support dynamic
   template <typename F1, typename F2, typename... Args>
   requires(visitable<F1, Args...> && !std::convertible_to<F2, object const *>)
   [[gnu::hot]]
@@ -610,6 +928,7 @@ namespace jank::runtime
       std::forward<Args>(args)...);
   }
 
+  //TODO support dynamic
   template <typename F1, typename F2, typename... Args>
   requires(visitable<F1, Args...> && !std::convertible_to<F2, object const *>)
   [[gnu::hot]]
@@ -654,6 +973,7 @@ namespace jank::runtime
       std::forward<Args>(args)...);
   }
 
+  //TODO support dynamic
   template <typename F1, typename F2, typename... Args>
   requires(!std::convertible_to<F2, object const *>)
   [[gnu::hot]]
